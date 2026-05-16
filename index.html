@@ -130,6 +130,11 @@ body{font-family:'Inter',sans-serif;background:#07090707;color:#f0f0f0;min-heigh
 .dt{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#fff;margin-bottom:2px}
 .ds{font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#2a6a2a;margin-bottom:14px}
 
+/* Clases para elementos con color inline (necesario para override en print) */
+.rpt-muscle-title{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#fff;margin-bottom:12px}
+.rpt-muscle-title .muscle-name{color:#00ff88}
+.th-r{color:#00c853!important}.th-l{color:#4ade80!important}
+
 /* Report header */
 .rpt-hdr{background:linear-gradient(180deg,#0d1a0d,#090d09);border:1px solid #1a3a1a;border-radius:10px;padding:20px 26px;display:grid;grid-template-columns:auto 1fr auto;gap:22px;align-items:center}
 .brand{display:flex;align-items:center;gap:12px}
@@ -273,6 +278,18 @@ td.dom{color:#fff;font-weight:700}
   /* Títulos de sección */
   .dt{color:#111!important}
   .ds{color:#445!important}
+
+  /* Header title y columnas de tabla — inline styles override con clases */
+  .rpt-muscle-title{color:#111!important}
+  .rpt-muscle-title .muscle-name{color:#1a6632!important}
+  .th-r{color:#1a6632!important}
+  .th-l{color:#2a8a4a!important}
+
+  /* Perfil TDF — barras más visibles en print */
+  .rfd-row{grid-template-columns:60px 1fr 110px!important}
+  .rfd-trk{height:10px!important;border-radius:5px!important}
+  .rfd-vs{font-size:11px!important}
+  .rfd-win{font-size:11px!important;color:#223!important}
 
   /* Brand / header */
   .bn{color:#111!important}
@@ -782,8 +799,8 @@ function buildReport(d){
       </div>
     </div>
     <div>
-      <div style="font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#fff;margin-bottom:12px">
-        Informe de <span style="color:#00ff88">${patient.muscle}</span>: Análisis Comparativo de Fuerza y TDF
+      <div class="rpt-muscle-title">
+        Informe de <span class="muscle-name">${patient.muscle}</span>: Análisis Comparativo de Fuerza y TDF
       </div>
       <div class="rpt-patient-block">
         <div class="rpn">${patient.name}</div>
@@ -884,8 +901,8 @@ function buildReport(d){
     <table>
       <thead><tr>
         <th>Métrica</th>
-        <th style="color:#00c853">▶ ${RL}</th>
-        <th style="color:#4ade80">◀ ${LL}</th>
+        <th class="th-r">▶ ${RL}</th>
+        <th class="th-l">◀ ${LL}</th>
         <th>Déficit / Asimetría</th>
       </tr></thead>
       <tbody>
@@ -968,7 +985,7 @@ function buildReport(d){
   setTimeout(()=>{
     document.getElementById('hbR').style.width = rPct+'%';
     document.getElementById('hbL').style.width = lPct+'%';
-    drawGauge(r.fmax||0, l.fmax||0);
+    drawGauge(r.fmax||0, l.fmax||0, RL, LL);
     renderCharts(r, l, RL, LL, fDomR, rDomR, fDef, rDef);
     buildRfdProfile(r, l);
     if(hasCurve) renderCurve(r, l, RL, LL);
@@ -1056,7 +1073,7 @@ function buildConclusion(r,l,d,RL,LL,fDomR,rDomR,fDef,rDef,fAlarm,rAlarm,patient
 }
 
 /* ===== GAUGE ===== */
-function drawGauge(rV,lV){
+function drawGauge(rV,lV,RL,LL){
   const c=document.getElementById('gaugeC');if(!c)return;
   const ctx=c.getContext('2d'),W=c.width,H=c.height,cx=W/2,cy=H-16;
   const rad=Math.min(cx-16,cy-8)-8;
@@ -1072,7 +1089,7 @@ function drawGauge(rV,lV){
   ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+(rad-32)*Math.cos(na),cy+(rad-32)*Math.sin(na));ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.lineCap='round';ctx.stroke();
   ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fillStyle='#00c853';ctx.fill();
   ctx.font='bold 9px Rajdhani,sans-serif';ctx.fillStyle='#2a6a2a';ctx.textAlign='center';
-  ctx.fillText('Right',cx-rad/2+8,cy+13);ctx.fillText('Left',cx+rad/2-8,cy+13);
+  ctx.fillText(RL||'Derecho',cx-rad/2+8,cy+13);ctx.fillText(LL||'Izquierdo',cx+rad/2-8,cy+13);
 }
 
 /* ===== CHARTS ===== */
