@@ -292,6 +292,28 @@ td.dom{color:#fff;font-weight:700}
 
 /* SVG logo shortcuts */
 .logo-svg{display:block}
+
+/* ===== PHOTO UPLOAD ZONES ===== */
+.prof-section{margin-bottom:20px;background:#0a0f0a;border:1px solid #1a3a1a;border-radius:10px;padding:16px}
+.prof-section-title{font-family:'Rajdhani',sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#2a6a2a;margin-bottom:12px;font-weight:700}
+.prof-row{display:grid;grid-template-columns:1fr 120px 120px;gap:14px;align-items:end}
+.photo-zone{
+  width:110px;height:90px;background:#060806;border:2px dashed #1e3a1e;border-radius:8px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;position:relative;overflow:hidden;transition:all .2s;text-align:center;padding:8px;
+}
+.photo-zone:hover{border-color:#00c853;background:#00c85506}
+.photo-zone.loaded{border-style:solid;border-color:#1e5a1e}
+.photo-zone img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:6px;display:none}
+.photo-zone.loaded img{display:block}
+.photo-zone .ph-icon{font-size:20px;opacity:.35}
+.photo-zone .ph-lbl{font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#1e3a1e;margin-top:4px;line-height:1.3}
+.photo-zone.loaded .ph-icon,.photo-zone.loaded .ph-lbl{display:none}
+.photo-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+
+/* Report photo display */
+.rpt-prof-photo{width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid #1a4a1a;flex-shrink:0}
+.rpt-inst-logo{max-height:48px;max-width:110px;object-fit:contain;border-radius:4px}
 </style>
 </head>
 <body>
@@ -334,24 +356,53 @@ td.dom{color:#fff;font-weight:700}
     <div class="qf full"><label>Lesión / Patología (opcional)</label><input type="text" id="pInjury" placeholder="Ej: Tendinopatía rotuliana, LCA, Sin lesiones..."></div>
   </div>
 
+  <!-- Professional info -->
+  <div class="prof-section">
+    <div class="prof-section-title">Datos del Profesional e Institución</div>
+    <div class="prof-row">
+      <div class="qf" style="margin:0">
+        <label>Nombre del Profesional</label>
+        <input type="text" id="pProf" placeholder="Lic. Apellido, Nombre" value="Lic. Lezcano, E.">
+      </div>
+      <div>
+        <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#2a6a2a;margin-bottom:5px;font-family:'Rajdhani',sans-serif;font-weight:700">Foto Profesional</div>
+        <div class="photo-zone" id="photoProf">
+          <input type="file" accept="image/*" onchange="setPhoto(event,'prof')">
+          <div class="ph-icon">👤</div>
+          <div class="ph-lbl">Clic para<br>agregar foto</div>
+          <img id="prevProf" alt="">
+        </div>
+      </div>
+      <div>
+        <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#2a6a2a;margin-bottom:5px;font-family:'Rajdhani',sans-serif;font-weight:700">Logo Institución</div>
+        <div class="photo-zone" id="photoInst">
+          <input type="file" accept="image/*" onchange="setPhoto(event,'inst')">
+          <div class="ph-icon">🏢</div>
+          <div class="ph-lbl">Clic para<br>agregar logo</div>
+          <img id="prevInst" alt="">
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Image drop zones -->
   <div class="drop-row">
     <div class="drop r-drop" id="dropR"
       ondragover="ov(event,'R')" ondragleave="ol(event,'R')" ondrop="od(event,'R')">
       <input type="file" accept="image/*" onchange="onFile(event,'R')">
-      <div class="drop-label">DERECHO / TOMA 1</div>
+      <div class="drop-label">IMAGEN 1</div>
       <div class="drop-icon">📸</div>
-      <div class="drop-side">Derecho / Toma 1</div>
-      <div class="drop-hint">Arrastrá la captura de Valkyria<br>o hacé clic para seleccionar</div>
+      <div class="drop-side">Imagen 1</div>
+      <div class="drop-hint">La IA detecta el lado automáticamente<br>Arrastrá o clic para seleccionar</div>
       <img id="prevR" class="drop-preview" alt="">
     </div>
     <div class="drop l-drop" id="dropL"
       ondragover="ov(event,'L')" ondragleave="ol(event,'L')" ondrop="od(event,'L')">
       <input type="file" accept="image/*" onchange="onFile(event,'L')">
-      <div class="drop-label">IZQUIERDO / TOMA 2</div>
+      <div class="drop-label">IMAGEN 2</div>
       <div class="drop-icon">📸</div>
-      <div class="drop-side">Izquierdo / Toma 2</div>
-      <div class="drop-hint">Arrastrá la captura de Valkyria<br>o hacé clic para seleccionar</div>
+      <div class="drop-side">Imagen 2</div>
+      <div class="drop-hint">La IA detecta el lado automáticamente<br>Arrastrá o clic para seleccionar</div>
       <img id="prevL" class="drop-preview" alt="">
     </div>
   </div>
@@ -386,10 +437,30 @@ td.dom{color:#fff;font-weight:700}
 const GROQ_KEY = ['gsk_JkHBSch','NpW16hcBa6Vgt','WGdyb3FYAcP33hzaz51LkH56Y1DHSiDQ'].join('');
 
 let imgR = null, imgL = null;
+let profPhoto = null, instLogo = null;
 let activeCharts = {};
 
 document.getElementById('topDate').textContent =
   new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
+
+/* ===== PHOTO UPLOADS ===== */
+function setPhoto(e, type){
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const dataURL = ev.target.result;
+    if(type === 'prof'){
+      profPhoto = dataURL;
+      document.getElementById('prevProf').src = dataURL;
+      document.getElementById('photoProf').classList.add('loaded');
+    } else {
+      instLogo = dataURL;
+      document.getElementById('prevInst').src = dataURL;
+      document.getElementById('photoInst').classList.add('loaded');
+    }
+  };
+  reader.readAsDataURL(file);
+}
 
 /* ===== DRAG & DROP ===== */
 function ov(e,s){e.preventDefault();document.getElementById('drop'+s).classList.add('over')}
@@ -456,19 +527,19 @@ async function generate(){
 async function extractWithClaude(apiKey, r, l){
   const proto = document.getElementById('pProto') ? document.getElementById('pProto').value : 'bilateral';
 
-  const prompt = `Estas son DOS capturas de pantalla del software Valkyria Trainer (dinamómetro isométrico digital).
-La PRIMERA imagen es el lado Derecho (o Toma 1).
-La SEGUNDA imagen es el lado Izquierdo (o Toma 2).
+  const prompt = `Analizá AMBAS imágenes del software Valkyria Trainer (dinamómetro isométrico).
 
-Extraé TODOS los valores numéricos que aparezcan visualmente en cada captura.
-Los campos posibles son: Force Max (N), Force Avg (N), initialForce (N), Time Max Force (s), Force At 50 (N), Force At 100 (N), Force At 150 (N), Force At 200 (N), Force At 250 (N), RFD at 50 (N/s), RFD at 100 (N/s), RFD at 150 (N/s), RFD at 250 (N/s).
+PASO 1 — DETECTÁ EL LADO: Leé el título o encabezado de cada imagen para determinar si corresponde al lado DERECHO o IZQUIERDO. Buscá palabras como "Right", "Left", "Derecho", "Izquierdo" o el nombre del músculo con lateralidad (ej: "Right Quadriceps", "Left Hamstring"). La primera imagen puede ser cualquier lado — determinalo vos leyendo la imagen.
 
-También leé el título de cada imagen para identificar el nombre del músculo (ej: "Left Quadriceps", "Right Shoulder").
+PASO 2 — EXTRAÉ LOS DATOS: Para cada imagen, extraé TODOS los valores numéricos visibles. Los campos son: Force Max (N), Force Avg (N), Initial Force (N), Time Max Force (s), Force At 50 (N), Force At 100 (N), Force At 150 (N), Force At 200 (N), Force At 250 (N), RFD at 50 (N/s), RFD at 100 (N/s), RFD at 150 (N/s), RFD at 250 (N/s).
 
-Respondé SOLO con un JSON válido, sin texto adicional, sin markdown, sin explicaciones:
+PASO 3 — IDENTIFICÁ EL MÚSCULO: Leé el nombre del músculo evaluado en español (ej: "Cuádriceps", "Isquiotibiales", "Rotadores Internos de Hombro").
+
+Respondé SOLO con JSON válido, sin texto adicional, sin markdown:
 {
-  "rightLabel": "nombre del músculo de la imagen 1",
-  "leftLabel": "nombre del músculo de la imagen 2",
+  "musculo": "nombre del músculo en español",
+  "rightLabel": "Derecho",
+  "leftLabel": "Izquierdo",
   "right": {
     "fmax": número o null,
     "favg": número o null,
@@ -487,7 +558,7 @@ Respondé SOLO con un JSON válido, sin texto adicional, sin markdown, sin expli
   "left": { misma estructura }
 }
 
-IMPORTANTE: Colocá null en campos que no estén visibles. NO inventes valores.`;
+IMPORTANTE: Asigná los datos al lado correcto según lo que leíste en la imagen. Colocá null en campos no visibles. NUNCA inventes valores.`;
 
   const body = {
     model: 'meta-llama/llama-4-scout-17b-16e-instruct',
@@ -536,9 +607,11 @@ IMPORTANTE: Colocá null en campos que no estén visibles. NO inventes valores.`
     patient: {
       name: document.getElementById('pName').value || 'Sin especificar',
       sport: document.getElementById('pSport').value || '—',
-      muscle: document.getElementById('pMuscle').value || parsed.rightLabel || '—',
+      muscle: document.getElementById('pMuscle').value || parsed.musculo || '—',
       injury: document.getElementById('pInjury').value || '',
-      eval: 'Lic. Lezcano, E.',
+      prof: document.getElementById('pProf').value || 'Profesional',
+      profPhoto: profPhoto,
+      instLogo: instLogo,
     },
     date: new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'})
   };
@@ -601,19 +674,21 @@ function buildReport(d){
   <!-- HEADER -->
   <div class="rpt-hdr">
     <div class="brand">
-      ${logo}
+      ${patient.instLogo
+        ? `<img src="${patient.instLogo}" class="rpt-inst-logo" alt="Logo">`
+        : logo}
       <div class="brand-txt">
         <div class="bn">MOVE<span>INFORME</span></div>
-        <div class="bs">The Move Club · Est. 2021</div>
+        <div class="bs">Evaluación Isométrica Bilateral</div>
       </div>
     </div>
     <div>
       <div style="font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#fff;margin-bottom:12px">
-        Informe de <span style="color:#00ff88">${patient.muscle}</span>: Análisis Comparativo de Fuerza y RFD
+        Informe de <span style="color:#00ff88">${patient.muscle}</span>: Análisis Comparativo de Fuerza y TDF
       </div>
       <div class="rpt-patient-block">
         <div class="rpn">${patient.name}</div>
-        <div class="rpd">Deporte: <strong>${patient.sport}</strong> · Evaluador: <strong>${patient.eval}</strong></div>
+        <div class="rpd">Deporte: <strong>${patient.sport}</strong> · Evaluador: <strong>${patient.prof}</strong></div>
         ${injHTML}
       </div>
     </div>
@@ -621,7 +696,12 @@ function buildReport(d){
       <div class="rmt"><strong>${d.date}</strong></div>
       <div class="rmt">Dinamómetro Isométrico · Valkyria Trainer</div>
       <div class="rmt">Unidades: <strong>N / N/s / s</strong></div>
-      <div style="margin-top:8px">${badge}</div>
+      ${patient.profPhoto
+        ? `<div style="margin-top:10px;display:flex;align-items:center;gap:8px;justify-content:flex-end">
+            <img src="${patient.profPhoto}" class="rpt-prof-photo" alt="Profesional">
+            <div style="font-family:'Rajdhani',sans-serif;font-size:10px;color:#3a7a3a;text-align:right">${patient.prof}</div>
+           </div>`
+        : `<div style="margin-top:8px">${badge}</div>`}
     </div>
   </div>
 
@@ -652,8 +732,8 @@ function buildReport(d){
       </div>
     </div>
     <div class="dcard">
-      <div class="dt">Pico RFD a 50ms</div>
-      <div class="ds">Explosividad Neuromuscular Temprana — N/s</div>
+      <div class="dt">TDF a 50ms — Fase Neural Temprana</div>
+      <div class="ds">Tasa de Desarrollo de Fuerza (0–50ms) — Predominantemente Neural · N/s</div>
       <div class="hbars">
         <div class="hb-r">
           <div class="hb-lbl">${patient.muscle} ${RL.toUpperCase()}</div>
@@ -679,7 +759,7 @@ function buildReport(d){
       </div>
     </div>
     <div class="dcard">
-      <div class="dt">Explosividad</div><div class="ds">RFD a 50ms (N/s)</div>
+      <div class="dt">TDF @ 50ms</div><div class="ds">Explosividad Neural Temprana (N/s)</div>
       <div style="position:relative">
         <canvas id="cRfd50" height="200"></canvas>
         <div class="bar-note">${rDomR?RL:LL} más explosivo (${rDef??'—'}%)</div>
@@ -710,20 +790,20 @@ function buildReport(d){
         <th>Déficit / Asimetría</th>
       </tr></thead>
       <tbody>
-        ${tr2('Fuerza Máxima','Peak Force','N',r.fmax,l.fmax,15,false)}
-        ${tr2('Fuerza Promedio','Force Avg','N',r.favg,l.favg,15,false)}
-        ${tr2('Tiempo al Pico','Time Max Force','s',r.tpeak,l.tpeak,30,true)}
-        ${tr2('RFD @ 50ms','Fase neural temprana','N/s',r.rfd50,l.rfd50,20,false)}
-        ${tr2('RFD @ 100ms','Fase neural intermedia','N/s',r.rfd100,l.rfd100,20,false)}
-        ${tr2('RFD @ 150ms','Fase puente','N/s',r.rfd150,l.rfd150,20,false)}
-        ${tr2('RFD @ 250ms','Fase tardía','N/s',r.rfd250,l.rfd250,20,false)}
+        ${tr2('Fuerza Máxima','Pico de fuerza isométrica','N',r.fmax,l.fmax,15,false)}
+        ${tr2('Fuerza Promedio','Fuerza media de la contracción','N',r.favg,l.favg,15,false)}
+        ${tr2('Tiempo al Pico','Tiempo hasta fuerza máxima','s',r.tpeak,l.tpeak,30,true)}
+        ${tr2('TDF @ 50ms','Fase neural temprana — impulso neural','N/s',r.rfd50,l.rfd50,20,false)}
+        ${tr2('TDF @ 100ms','Fase neural — reclutamiento UM','N/s',r.rfd100,l.rfd100,20,false)}
+        ${tr2('TDF @ 150ms','Fase temprana/intermedia (límite neural)','N/s',r.rfd150,l.rfd150,20,false)}
+        ${tr2('TDF @ 250ms','Fase tardía — mixta (neural + estructural)','N/s',r.rfd250,l.rfd250,20,false)}
       </tbody>
     </table>
   </div>
 
   <!-- RFD PROFILE -->
   <div class="dcard">
-    <div class="dt">Perfil RFD — Todas las Ventanas (N/s)</div>
+    <div class="dt">Perfil TDF — Todas las Ventanas Temporales (N/s)</div>
     <div style="display:flex;gap:16px;margin-bottom:12px">
       <span style="font-family:'Rajdhani',sans-serif;font-size:10px;display:flex;align-items:center;gap:5px;color:#00c853"><span style="width:8px;height:8px;border-radius:50%;background:#00c853;display:inline-block"></span>${RL}</span>
       <span style="font-family:'Rajdhani',sans-serif;font-size:10px;display:flex;align-items:center;gap:5px;color:#4ade80"><span style="width:8px;height:8px;border-radius:50%;background:#4ade80;display:inline-block"></span>${LL}</span>
@@ -763,21 +843,26 @@ function buildReport(d){
       </div>
     </div>
     <div style="margin-top:10px;font-size:9px;color:#1e3a1e;font-family:'Rajdhani',sans-serif;padding:8px 12px;background:#080e08;border:1px solid #1a2a1a;border-radius:6px">
-      Bases: Bamman MM et al. (2005) · Andersen LL et al. (2016) "Rate of Force Development" · Schiavone F et al. (2020)
+      Referencias: Maffiuletti NA et al. (2016) Eur J Appl Physiol · Aagaard P et al. (2002) J Appl Physiol · Tillin NA et al. (2013) J Sports Sci · Knezevic OM et al. (2014) The Knee · VALD Health (2026)
     </div>
   </div>
 
   <!-- FOOTER -->
   <div class="rpt-footer">
     <div style="display:flex;align-items:center;gap:12px">
-      <svg width="28" height="24" viewBox="0 0 90 76" fill="none" style="color:#2a6a2a">
-        <polygon points="45,3 87,72 3,72" stroke="currentColor" stroke-width="4.5" stroke-linejoin="round" fill="none"/>
-        <polygon points="45,21 71,72 19,72" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round" fill="none"/>
-        <polygon points="45,40 60,72 30,72" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
-      </svg>
-      <div class="rf-l"><strong>${patient.eval} · The Move Club</strong>${d.date}</div>
+      ${patient.instLogo
+        ? `<img src="${patient.instLogo}" style="max-height:36px;max-width:80px;object-fit:contain;border-radius:3px" alt="Logo">`
+        : `<svg width="28" height="24" viewBox="0 0 90 76" fill="none" style="color:#2a6a2a">
+            <polygon points="45,3 87,72 3,72" stroke="currentColor" stroke-width="4.5" stroke-linejoin="round" fill="none"/>
+            <polygon points="45,21 71,72 19,72" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round" fill="none"/>
+            <polygon points="45,40 60,72 30,72" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
+           </svg>`}
+      <div class="rf-l"><strong>${patient.prof}</strong>${d.date}</div>
     </div>
-    <div class="rf-r">Dinamómetro Isométrico Digital · Valkyria Trainer<br>MOVEINFORME · N / N/s / s</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      ${patient.profPhoto ? `<img src="${patient.profPhoto}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid #1a4a1a" alt="">` : ''}
+      <div class="rf-r">Dinamómetro Isométrico · Valkyria Trainer<br>Unidades: N / N/s / s</div>
+    </div>
   </div>
   `;
 
@@ -807,25 +892,61 @@ function tr2(label,sub,unit,rV,lV,thr,inv){
 
 /* ===== CONCLUSION ===== */
 function buildConclusion(r,l,d,RL,LL,fDomR,rDomR,fDef,rDef,fAlarm,rAlarm,patient){
-  const fDom=fDomR?RL:LL, rDom=rDomR?RL:LL;
+  const fDom=fDomR?RL:LL, fWeak=fDomR?LL:RL;
+  const rDom=rDomR?RL:LL;
   const paradox = fDomR!==rDomR;
 
-  let vIcon='✅',vLabel='Perfil Simétrico — Mantenimiento Preventivo',vDetail='Déficits bilaterales dentro de parámetros normales. Mantener con protocolo preventivo y reevaluar en 4–6 semanas.';
-  if(fAlarm&&rAlarm){vIcon='🚨';vLabel='INTERVENCIÓN TERAPÉUTICA URGENTE';vDetail='Déficit bilateral crítico. Protocolo doble: isometría sostenida (fuerza) + isometría explosiva (neural) focalizados en el lado más débil.'}
-  else if(fAlarm){vIcon='⚠️';vLabel='DÉFICIT ESTRUCTURAL — Requiere Intervención';vDetail='Priorizar protocolo de isometría sostenida de alta intensidad. La función neural (RFD) es aceptable.'}
-  else if(rAlarm){vIcon='⚡';vLabel='DÉFICIT NEURAL — Trabajo Explosivo Recomendado';vDetail='Contracciones balísticas explosivas (<200ms) para mejorar RFD en fase temprana.'}
+  // RFD fase temprana (0-150ms) vs tardía (>150ms) — Maffiuletti et al. 2016 / VALD Health
+  const earlyDef = def(r.rfd50, l.rfd50);   // 50ms — predominantemente neural
+  const midDef   = def(r.rfd100, l.rfd100); // 100ms — neural
+  const lateDef  = def(r.rfd250, l.rfd250); // 250ms — mixta (neural + estructural)
 
-  const injNote = patient.injury ? ` Considerando la patología reportada (<strong>${patient.injury}</strong>), ajustar cargas según tolerancia y estado tisular.` : '';
-  const pNote = paradox ? ` <strong>Paradoja neuromuscular detectada:</strong> ${fDom} domina en fuerza bruta pero ${rDom} es más explosivo en fase neural temprana.` : ` El lado ${fDom} es dominante en fuerza y explosividad — perfil coherente.`;
+  // Determinar perfil predominante
+  const earlyAlarm = (earlyDef??0) > 20;
+  const lateAlarm  = (lateDef??0) > 20;
 
-  const txt = `El <strong>lado ${fDom.toUpperCase()}</strong> presenta mayor Fuerza Máxima (${n(fDomR?r.fmax:l.fmax)} N vs ${n(fDomR?l.fmax:r.fmax)} N, asimetría del <strong>${fDef??'—'}%</strong>) y mayor Fuerza Promedio.${pNote} Los RFD tardíos (250ms) muestran asimetría del <strong>${def(r.rfd250,l.rfd250)??'—'}%</strong>, indicando que las diferencias se concentran principalmente en la <strong>fase de reclutamiento rápido (0–100ms)</strong>.${injNote}`;
+  let vIcon='✅', vLabel='Perfil Simétrico — Mantenimiento Preventivo';
+  let vDetail='Los déficits bilaterales se encuentran dentro de parámetros normales. Mantener con protocolo preventivo y reevaluar en 4–6 semanas (Tillin et al., 2013).';
+  if(fAlarm&&rAlarm){
+    vIcon='🚨'; vLabel='INTERVENCIÓN TERAPÉUTICA URGENTE — Déficit Bilateral Crítico';
+    vDetail='Déficit combinado estructural y neural. Protocolo doble: isometría sostenida de alta intensidad para fuerza máxima + isometría explosiva balística para TDF. La recuperación de la fuerza sin la correspondiente recuperación de TDF es un indicador tardío de rehabilitación incompleta (VALD Health, 2026).';
+  } else if(fAlarm){
+    vIcon='⚠️'; vLabel='DÉFICIT ESTRUCTURAL — Capacidad de Fuerza Máxima';
+    vDetail='Priorizar isometría sostenida de alta intensidad (>85% MVC, 3–5s). La función neural (TDF fase temprana) es aceptable. Controlar progresión cada 4 semanas (Aagaard et al., 2002).';
+  } else if(rAlarm){
+    vIcon='⚡'; vLabel='DÉFICIT NEURAL — Tasa de Desarrollo de Fuerza';
+    vDetail='TDF fase temprana (0–150ms) deficitaria indica insuficiencia en el impulso neural y la tasa de reclutamiento de unidades motoras. Prescribir contracciones balísticas explosivas <200ms, 50–70% MVC (Maffiuletti et al., 2016; Van Cutsem et al., 1998).';
+  }
+
+  // Análisis de fases
+  let fasesTxt = '';
+  if(earlyDef !== null && lateDef !== null){
+    const predominio = earlyAlarm && !lateAlarm
+      ? 'predominantemente <strong>neural</strong> (déficit concentrado en fase temprana 0–150ms)'
+      : lateAlarm && !earlyAlarm
+        ? 'predominantemente <strong>estructural/mixto</strong> (déficit en fase tardía >150ms)'
+        : earlyAlarm && lateAlarm
+          ? '<strong>neural y estructural</strong> (déficit en todas las fases)'
+          : 'dentro de parámetros normales en ambas fases';
+    fasesTxt = ` El perfil de TDF es ${predominio} — TDF@50ms: <strong>${n(r.rfd50)} vs ${n(l.rfd50)} N/s</strong> (asimetría ${earlyDef??'—'}%), TDF@250ms: <strong>${n(r.rfd250)} vs ${n(l.rfd250)} N/s</strong> (asimetría ${lateDef??'—'}%).`;
+  }
+
+  const paradoxTxt = paradox
+    ? ` <strong>Paradoja neuromuscular detectada:</strong> ${fDom} domina en fuerza máxima pero ${rDom} presenta mayor explosividad en la fase neural temprana — disociación entre capacidad estructural y eficiencia neural.`
+    : ` El lado ${fDom} es dominante tanto en fuerza máxima como en explosividad — perfil neuromuscular coherente.`;
+
+  const injNote = patient.injury
+    ? ` Considerando la patología reportada (<strong>${patient.injury}</strong>), ajustar las cargas según tolerancia tisular y estado clínico actual. Los déficits de TDF suelen persistir más allá de la resolución de los déficits de fuerza (Knezevic et al., 2014).`
+    : '';
+
+  const txt = `El <strong>lado ${fDom.toUpperCase()}</strong> presenta mayor Fuerza Máxima (<strong>${n(fDomR?r.fmax:l.fmax)} N</strong> vs ${n(fDomR?l.fmax:r.fmax)} N, asimetría del <strong>${fDef??'—'}%</strong>).${paradoxTxt}${fasesTxt}${injNote}`;
 
   return `<div class="concl">
     <div class="concl-title">
       <svg width="13" height="11" viewBox="0 0 90 76" fill="none" style="color:#00c853;flex-shrink:0;display:inline-block;vertical-align:middle;margin-right:6px">
         <polygon points="45,3 87,72 3,72" stroke="currentColor" stroke-width="6" fill="none"/>
       </svg>
-      Conclusión Clínica — The Move Club
+      Conclusión Clínica
     </div>
     <div class="concl-text">${txt}</div>
     <div class="concl-verdict">
