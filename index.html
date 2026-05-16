@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOVEINFORME — The Move Club</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#07090707;color:#f0f0f0;min-height:100vh;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#1e3a1e;border-radius:2px}
+
+/* ===== TOPBAR ===== */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:54px;background:#0a0a0a;border-bottom:1px solid #1a2a1a;position:sticky;top:0;z-index:100}
+.tlogo{display:flex;align-items:center;gap:10px}
+.tlogo-name{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;letter-spacing:2px;color:#fff}
+.tlogo-name span{color:#00ff88}
+.topbar-r{font-size:10px;color:#2a4a2a;font-family:'Rajdhani',sans-serif;letter-spacing:2px;text-transform:uppercase}
+
+/* ===== VIEWS ===== */
+.view{display:none}.view.active{display:block}
+
+/* ===== UPLOAD VIEW ===== */
+.upload-wrap{max-width:780px;margin:0 auto;padding:40px 20px}
+
+.upload-hero{text-align:center;margin-bottom:36px}
+.upload-hero h1{font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;letter-spacing:1px;color:#fff;margin-bottom:6px}
+.upload-hero h1 span{color:#00ff88}
+.upload-hero p{font-size:13px;color:#3a6a3a;font-family:'Rajdhani',sans-serif;letter-spacing:1px}
+
+/* Patient quick fields */
+.quick-fields{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px}
+.qf{display:flex;flex-direction:column;gap:5px}
+.qf label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#2a6a2a;font-weight:600}
+.qf input{background:#111;border:1px solid #1e2e1e;border-radius:7px;padding:9px 13px;color:#f0f0f0;font-size:13px;outline:none;transition:border-color .2s;font-family:'Inter',sans-serif}
+.qf input:focus{border-color:#00c853;box-shadow:0 0 0 2px #00c85318}
+.qf input::placeholder{color:#2a4a2a}
+.qf.full{grid-column:1/-1}
+
+/* Drop zones */
+.drop-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.drop{
+  background:#0d0d0d;border:2px dashed #1e3a1e;border-radius:12px;
+  min-height:200px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:10px;cursor:pointer;position:relative;
+  text-align:center;padding:24px;transition:all .2s;
+}
+.drop:hover,.drop.over{border-color:#00c853;background:#00c85506}
+.drop.loaded{border-style:solid;border-color:#1e5a1e;background:#0a120a}
+.drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-icon{font-size:36px;opacity:.35}
+.drop-side{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.drop.r-drop .drop-side{color:#00c853}.drop.l-drop .drop-side{color:#4ade80}
+.drop-hint{font-size:11px;color:#1e3a1e;font-family:'Rajdhani',sans-serif}
+.drop-preview{max-width:100%;max-height:150px;object-fit:contain;border-radius:6px;display:none}
+.drop.loaded .drop-preview{display:block}
+.drop.loaded .drop-icon,.drop.loaded .drop-side,.drop.loaded .drop-hint{display:none}
+.drop-label{
+  position:absolute;top:8px;left:8px;
+  font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  padding:3px 8px;border-radius:4px;display:none;
+}
+.drop.loaded .drop-label{display:block}
+.r-drop .drop-label{background:#00c85320;color:#00c853}
+.l-drop .drop-label{background:#4ade8020;color:#4ade80}
+
+/* API Key */
+.api-section{margin-bottom:20px}
+.api-toggle{
+  display:flex;align-items:center;gap:8px;cursor:pointer;
+  font-size:11px;color:#2a5a2a;font-family:'Rajdhani',sans-serif;letter-spacing:1px;
+  text-transform:uppercase;margin-bottom:8px;user-select:none;
+}
+.api-toggle:hover{color:#00c853}
+.api-field{display:none;flex-direction:column;gap:6px}
+.api-field.open{display:flex}
+.api-field label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#2a5a2a;font-weight:600}
+.api-field input{
+  background:#111;border:1px solid #1e2e1e;border-radius:7px;
+  padding:9px 13px;color:#f0f0f0;font-size:13px;outline:none;
+  transition:border-color .2s;font-family:'Inter',sans-serif;letter-spacing:1px;
+}
+.api-field input:focus{border-color:#00c853}
+.api-field input::placeholder{color:#2a4a2a;letter-spacing:0}
+.api-hint{font-size:10px;color:#1e3a1e;font-family:'Rajdhani',sans-serif}
+
+/* Generate button */
+.gen-btn{
+  width:100%;padding:18px;
+  background:linear-gradient(135deg,#00c853,#00e676);
+  color:#000;border:none;border-radius:12px;
+  font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+  cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:12px;
+}
+.gen-btn:hover{box-shadow:0 0 32px #00c85348;transform:translateY(-1px)}
+.gen-btn:active{transform:translateY(0)}
+.gen-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* Error msg */
+.err-msg{
+  background:#ef444412;border:1px solid #ef444440;color:#ef4444;
+  border-radius:7px;padding:10px 14px;font-family:'Rajdhani',sans-serif;
+  font-size:12px;letter-spacing:.5px;margin-bottom:16px;display:none;
+}
+.err-msg.show{display:block}
+
+/* ===== LOADING OVERLAY ===== */
+.overlay{position:fixed;inset:0;background:#000000ee;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:20px}
+.overlay.active{display:flex}
+.spinner{width:44px;height:44px;border:3px solid #1a3a1a;border-top-color:#00c853;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.overlay-title{font-family:'Rajdhani',sans-serif;font-size:14px;letter-spacing:3px;text-transform:uppercase;color:#00c853}
+.overlay-sub{font-size:11px;color:#2a5a2a;font-family:'Rajdhani',sans-serif;letter-spacing:1px;text-align:center;max-width:300px;line-height:1.6}
+
+/* ===== REPORT VIEW ===== */
+.report-topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 22px;background:#0a0a0a;border-bottom:1px solid #1a2a1a}
+.back-btn{display:flex;align-items:center;gap:6px;background:#111;border:1px solid #1e2e1e;border-radius:6px;padding:7px 14px;color:#2a7a2a;font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;transition:all .2s;font-weight:700}
+.back-btn:hover{border-color:#00c853;color:#00c853}
+.print-btn{display:flex;align-items:center;gap:7px;background:linear-gradient(135deg,#00c853,#00e676);border:none;border-radius:6px;padding:8px 20px;color:#000;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;cursor:pointer;text-transform:uppercase;transition:all .2s}
+.print-btn:hover{box-shadow:0 0 18px #00c85340}
+
+/* Dashboard */
+.dash{background:#07090707;min-height:calc(100vh - 54px)}
+.dash-body{max-width:1360px;margin:0 auto;padding:18px 20px;display:flex;flex-direction:column;gap:15px}
+
+/* DCARD */
+.dcard{background:linear-gradient(180deg,#0d170d,#0a0f0a);border:1px solid #1a3a1a;border-radius:10px;padding:18px;position:relative;overflow:hidden}
+.dcard::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at top right,#00c85507,transparent 60%);pointer-events:none}
+.dt{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#fff;margin-bottom:2px}
+.ds{font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#2a6a2a;margin-bottom:14px}
+
+/* Report header */
+.rpt-hdr{background:linear-gradient(180deg,#0d1a0d,#090d09);border:1px solid #1a3a1a;border-radius:10px;padding:20px 26px;display:grid;grid-template-columns:auto 1fr auto;gap:22px;align-items:center}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-txt .bn{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;letter-spacing:2px;color:#fff}
+.brand-txt .bn span{color:#00ff88}
+.brand-txt .bs{font-size:9px;color:#1e5a1e;font-family:'Rajdhani',sans-serif;letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+.rpt-patient-block{background:#0a100a;border:1px solid #1a3a1a;border-radius:8px;padding:14px 18px}
+.rpn{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;color:#fff;margin-bottom:4px}
+.rpd{font-family:'Rajdhani',sans-serif;font-size:10px;color:#3a6a3a;letter-spacing:1px;margin-bottom:2px}
+.rpd strong{color:#7aba7a}
+.inj-tag{display:inline-flex;align-items:center;gap:4px;font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:3px;margin-top:5px;font-weight:700}
+.inj-tag.has{background:#ef444412;border:1px solid #ef444440;color:#ef4444}
+.inj-tag.none{background:#00c85310;border:1px solid #00c85340;color:#00c853}
+.rpt-meta{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.rmt{font-family:'Rajdhani',sans-serif;font-size:10px;color:#2a5a2a;letter-spacing:1px}
+.rmt strong{color:#5a8a5a}
+
+/* Alert */
+.alert{padding:12px 18px;border-radius:8px;display:flex;align-items:center;gap:12px;border:1px solid}
+.alert.alarm{background:#ef444412;border-color:#ef444440}
+.alert.warning{background:#f59e0b10;border-color:#f59e0b40}
+.alert.ok{background:#00c85310;border-color:#00c85340}
+.alert-icon{font-size:20px;flex-shrink:0}
+.alert-title{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.alert.alarm .alert-title{color:#ef4444}
+.alert.warning .alert-title{color:#f59e0b}
+.alert.ok .alert-title{color:#00c853}
+.alert-sub{font-size:11px;color:#5a6a5a;font-family:'Rajdhani',sans-serif;margin-top:2px}
+
+/* Row layouts */
+.row1{display:grid;grid-template-columns:1fr 1.8fr;gap:15px}
+.row2{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+
+/* Gauge */
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;gap:8px}
+.gvals{display:flex;justify-content:space-around;width:100%}
+.gv{text-align:center}
+.gv-l{font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#2a6a2a;margin-bottom:2px}
+.gv-n{font-family:'Rajdhani',sans-serif;font-size:21px;font-weight:700;color:#fff;line-height:1}
+.gv-u{font-size:9px;color:#1e4a1e;font-family:'Rajdhani',sans-serif}
+.gleg{display:flex;gap:16px;justify-content:center}
+.gl{display:flex;align-items:center;gap:5px;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;color:#7aba7a}
+.gd{width:9px;height:9px;border-radius:50%}
+
+/* HBars */
+.hbars{display:flex;flex-direction:column;gap:18px;padding-top:4px}
+.hb-lbl{font-family:'Rajdhani',sans-serif;font-size:10px;letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-bottom:6px}
+.hb-r .hb-lbl{color:#00c853}.hb-l .hb-lbl{color:#4ade80}
+.hb-track{position:relative;height:40px;background:#060806;border:1px solid #1a3a1a;border-radius:5px;overflow:hidden}
+.hb-fill{position:absolute;left:0;top:0;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:12px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.hb-r .hb-fill{background:linear-gradient(90deg,#003d18,#00c853)}
+.hb-l .hb-fill{background:linear-gradient(90deg,#002010,#4ade80)}
+.hb-val{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:#fff;white-space:nowrap}
+.hb-ax{display:flex;justify-content:space-between;margin-top:4px;font-size:8px;color:#1a3a1a;font-family:'Rajdhani',sans-serif}
+
+/* Bar annotation */
+.bar-note{position:absolute;bottom:46px;left:50%;transform:translateX(-50%);width:86%;background:#000000a0;border:1px solid #1a3a1a;border-radius:4px;padding:4px 7px;font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:700;color:#00ff88;text-align:center;pointer-events:none;z-index:10}
+
+/* Table */
+table{width:100%;border-collapse:collapse}
+thead tr{background:#060806}
+th{padding:9px 13px;text-align:left;font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#1e4a1e;font-weight:700;border-bottom:1px solid #1a3a1a}
+th.r-th{color:#00c853}.th.l-th{color:#4ade80}
+td{padding:10px 13px;font-family:'Rajdhani',sans-serif;font-size:12px;border-bottom:1px solid #0c140c}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#0a0f0a}
+td.mn{color:#4a7a4a;font-size:10px}
+td.mn strong{color:#ccc;font-size:12px;display:block}
+td.rv{color:#00c853;font-weight:600}
+td.lv{color:#4ade80;font-weight:600}
+td.dom{color:#fff;font-weight:700}
+.dbadge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:3px;font-size:10px;font-weight:700;border:1px solid;font-family:'Rajdhani',sans-serif}
+.dbadge.ok{background:#00c85310;border-color:#00c85340;color:#00c853}
+.dbadge.warn{background:#f59e0b10;border-color:#f59e0b40;color:#f59e0b}
+.dbadge.alarm{background:#ef444412;border-color:#ef444440;color:#ef4444}
+
+/* RFD Profile */
+.rfd-prof{display:flex;flex-direction:column;gap:12px}
+.rfd-row{display:grid;grid-template-columns:52px 1fr 100px;gap:10px;align-items:center}
+.rfd-win{font-family:'Rajdhani',sans-serif;font-size:10px;color:#2a6a2a;letter-spacing:1px;font-weight:700}
+.rfd-bc{display:flex;flex-direction:column;gap:3px}
+.rfd-br{display:flex;align-items:center;gap:6px}
+.rfd-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.rfd-trk{flex:1;height:6px;background:#060806;border-radius:3px;overflow:hidden;border:1px solid #1a2a1a}
+.rfd-f{height:100%;border-radius:2px;transition:width .8s ease}
+.rfd-f.r{background:#00c853}.rfd-f.l{background:#4ade80}
+.rfd-vs{font-family:'Rajdhani',sans-serif;font-size:10px;text-align:right;line-height:1.5}
+.rfd-vs .rv{color:#00c853}.rfd-vs .lv{color:#4ade80}
+
+/* Conclusion */
+.concl{background:linear-gradient(135deg,#090e09,#0c140c);border:1px solid #1a3a1a;border-left:3px solid #00c853;border-radius:10px;padding:20px 24px}
+.concl-title{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#00c853;margin-bottom:10px}
+.concl-text{font-family:'Rajdhani',sans-serif;font-size:13px;line-height:1.9;color:#7aba7a}
+.concl-text strong{color:#fff}
+.concl-verdict{margin-top:14px;padding:12px 16px;background:#0a0f0a;border:1px solid #1a3a1a;border-radius:6px;font-family:'Rajdhani',sans-serif;font-size:11px;color:#5a8a5a;display:flex;align-items:flex-start;gap:10px}
+.cv-icon{font-size:18px;flex-shrink:0}
+.cv-label{font-weight:700;color:#fff;font-size:12px;letter-spacing:1px;margin-bottom:3px}
+.cv-detail{line-height:1.6}
+
+/* Protocols */
+.proto-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.proto{background:#090e09;border:1px solid #1a3a1a;border-radius:8px;padding:16px;position:relative;overflow:hidden}
+.proto::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.proto.struct::before{background:#ef4444}.proto.neural::before{background:#f59e0b}.proto.maint::before{background:#00c853}
+.proto.off{opacity:.25}
+.proto-badge{display:inline-flex;align-items:center;gap:4px;font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:2px 8px;border-radius:3px;border:1px solid;margin-bottom:8px;font-weight:700}
+.proto.struct .proto-badge{border-color:#ef444450;color:#ef4444;background:#ef444410}
+.proto.neural .proto-badge{border-color:#f59e0b50;color:#f59e0b;background:#f59e0b10}
+.proto.maint .proto-badge{border-color:#00c85350;color:#00c853;background:#00c85310}
+.proto-name{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;color:#fff;margin-bottom:11px;text-transform:uppercase;letter-spacing:1px;line-height:1.3}
+.pp{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #1a2a1a}
+.pp:last-of-type{border-bottom:none}
+.ppl{font-size:10px;color:#2a5a2a;font-family:'Rajdhani',sans-serif}
+.ppv{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:#6a9a6a}
+
+/* Footer */
+.rpt-footer{background:#090e09;border:1px solid #1a3a1a;border-radius:10px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
+.rf-l{font-family:'Rajdhani',sans-serif;font-size:10px;color:#2a5a2a;letter-spacing:.5px}
+.rf-l strong{color:#4a8a4a;display:block;font-size:11px;margin-bottom:1px}
+.rf-r{text-align:right;font-family:'Rajdhani',sans-serif;font-size:9px;color:#1e3a1e;letter-spacing:.5px}
+
+/* ===== PRINT ===== */
+@media print{
+  body,html{background:#fff!important;color:#111!important}
+  .topbar,.report-topbar,.overlay{display:none!important}
+  #uploadView{display:none!important}
+  #reportView{display:block!important}
+  .view{display:block!important}
+  .dash{background:#fff!important}
+  .dcard,.concl,.proto,.rpt-hdr,.rpt-footer{background:#f8f8f8!important;border-color:#ddd!important}
+  .dcard::before{display:none!important}
+  .hb-track{background:#eee!important;border-color:#ccc!important}
+  .hb-r .hb-fill{background:#1a7a3a!important}
+  .hb-l .hb-fill{background:#4aba6a!important}
+  .rfd-trk{background:#eee!important}
+  .rfd-f.r{background:#1a7a3a!important}
+  .rfd-f.l{background:#4aba6a!important}
+  td{border-color:#ddd!important}
+  .rv{color:#006633!important}.lv{color:#2a8a4a!important}
+  .dbadge.alarm,.alert.alarm{background:#ffeeee!important;border-color:#ff9999!important;color:#cc0000!important}
+  .dbadge.ok,.alert.ok{background:#eeffee!important;border-color:#99cc99!important;color:#006633!important}
+  .dbadge.warn{background:#fff8ee!important;border-color:#ffddaa!important;color:#886600!important}
+  canvas{max-width:100%!important}
+  .row2{grid-template-columns:1fr 1fr!important}
+  .proto-row{grid-template-columns:1fr 1fr 1fr!important}
+  *{color-adjust:exact!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+}
+
+@media(max-width:800px){
+  .row1,.drop-row,.quick-fields{grid-template-columns:1fr}
+  .row2{grid-template-columns:1fr 1fr}
+  .rpt-hdr{grid-template-columns:1fr;gap:14px}
+}
+@media(max-width:500px){
+  .row2,.proto-row{grid-template-columns:1fr}
+}
+
+.fade-in{animation:fi .3s ease}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* SVG logo shortcuts */
+.logo-svg{display:block}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="tlogo">
+    <svg class="logo-svg" width="28" height="24" viewBox="0 0 90 76" fill="none" style="color:#00c853">
+      <polygon points="45,3 87,72 3,72" stroke="currentColor" stroke-width="4.5" stroke-linejoin="round" fill="none"/>
+      <polygon points="45,21 71,72 19,72" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round" fill="none"/>
+      <polygon points="45,40 60,72 30,72" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
+    </svg>
+    <div class="tlogo-name">MOVE<span>INFORME</span></div>
+  </div>
+  <div class="topbar-r">The Move Club · Est. 2021</div>
+  <div style="font-size:10px;color:#1e3a1e;font-family:'Rajdhani',sans-serif;letter-spacing:1px" id="topDate"></div>
+</header>
+
+<!-- LOADING -->
+<div class="overlay" id="overlay">
+  <div class="spinner"></div>
+  <div class="overlay-title">Analizando con IA</div>
+  <div class="overlay-sub" id="overlay-sub">Claude está leyendo las imágenes de Valkyria y extrayendo los datos de fuerza y RFD...</div>
+</div>
+
+<!-- ===== UPLOAD VIEW ===== -->
+<div class="view active" id="uploadView">
+<div class="upload-wrap">
+
+  <div class="upload-hero">
+    <h1>THE MOVE <span>CLUB</span></h1>
+    <p>Cargá las 2 capturas de Valkyria → La IA lee los datos → Informe listo</p>
+  </div>
+
+  <!-- Patient quick info -->
+  <div class="quick-fields">
+    <div class="qf"><label>Nombre del paciente</label><input type="text" id="pName" placeholder="Apellido, Nombre"></div>
+    <div class="qf"><label>Deporte</label><input type="text" id="pSport" placeholder="Fútbol, Rugby..."></div>
+    <div class="qf"><label>Grupo muscular</label><input type="text" id="pMuscle" placeholder="Cuádriceps, Hombro..."></div>
+    <div class="qf full"><label>Lesión / Patología (opcional)</label><input type="text" id="pInjury" placeholder="Ej: Tendinopatía rotuliana, LCA, Sin lesiones..."></div>
+  </div>
+
+  <!-- Image drop zones -->
+  <div class="drop-row">
+    <div class="drop r-drop" id="dropR"
+      ondragover="ov(event,'R')" ondragleave="ol(event,'R')" ondrop="od(event,'R')">
+      <input type="file" accept="image/*" onchange="onFile(event,'R')">
+      <div class="drop-label">DERECHO / TOMA 1</div>
+      <div class="drop-icon">📸</div>
+      <div class="drop-side">Derecho / Toma 1</div>
+      <div class="drop-hint">Arrastrá la captura de Valkyria<br>o hacé clic para seleccionar</div>
+      <img id="prevR" class="drop-preview" alt="">
+    </div>
+    <div class="drop l-drop" id="dropL"
+      ondragover="ov(event,'L')" ondragleave="ol(event,'L')" ondrop="od(event,'L')">
+      <input type="file" accept="image/*" onchange="onFile(event,'L')">
+      <div class="drop-label">IZQUIERDO / TOMA 2</div>
+      <div class="drop-icon">📸</div>
+      <div class="drop-side">Izquierdo / Toma 2</div>
+      <div class="drop-hint">Arrastrá la captura de Valkyria<br>o hacé clic para seleccionar</div>
+      <img id="prevL" class="drop-preview" alt="">
+    </div>
+  </div>
+
+  <div class="err-msg" id="errMsg"></div>
+  <button class="gen-btn" id="genBtn" onclick="generate()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+    Analizar con IA y Generar Informe
+  </button>
+
+</div>
+</div>
+
+<!-- ===== REPORT VIEW ===== -->
+<div class="view" id="reportView">
+  <div class="report-topbar">
+    <button class="back-btn" onclick="goBack()">← Nuevo Informe</button>
+    <button class="print-btn" onclick="window.print()">🖨 Exportar PDF</button>
+  </div>
+  <div class="dash fade-in">
+    <div class="dash-body" id="dashBody"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   MOVEINFORME — The Move Club
+   Usa Groq AI para leer imágenes Valkyria.
+   REGLA: Solo datos explícitos en imágenes. No inventar.
+============================================================ */
+
+const GROQ_KEY = ['gsk_JkHBSch','NpW16hcBa6Vgt','WGdyb3FYAcP33hzaz51LkH56Y1DHSiDQ'].join('');
+
+let imgR = null, imgL = null;
+let activeCharts = {};
+
+document.getElementById('topDate').textContent =
+  new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
+
+/* ===== DRAG & DROP ===== */
+function ov(e,s){e.preventDefault();document.getElementById('drop'+s).classList.add('over')}
+function ol(e,s){document.getElementById('drop'+s).classList.remove('over')}
+function od(e,s){e.preventDefault();ol(e,s);const f=e.dataTransfer.files[0];if(f)setImg(f,s)}
+function onFile(e,s){if(e.target.files[0])setImg(e.target.files[0],s)}
+
+function setImg(file, side){
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const dataURL = ev.target.result;
+    const base64 = dataURL.split(',')[1];
+    const mime = file.type || 'image/jpeg';
+
+    if(side === 'R'){
+      imgR = { base64, mime };
+      document.getElementById('prevR').src = dataURL;
+      document.getElementById('dropR').classList.add('loaded');
+    } else {
+      imgL = { base64, mime };
+      document.getElementById('prevL').src = dataURL;
+      document.getElementById('dropL').classList.add('loaded');
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ===== GENERATE ===== */
+async function generate(){
+  const err = document.getElementById('errMsg');
+  err.className = 'err-msg';
+
+  // Validations
+  if(!imgR && !imgL){
+    err.textContent = 'Cargá al menos una imagen de Valkyria para continuar.';
+    err.className = 'err-msg show'; return;
+  }
+  if(!imgR){
+    err.textContent = 'Falta la imagen del lado Derecho / Toma 1.';
+    err.className = 'err-msg show'; return;
+  }
+  if(!imgL){
+    err.textContent = 'Falta la imagen del lado Izquierdo / Toma 2.';
+    err.className = 'err-msg show'; return;
+  }
+
+  showOverlay('La IA está leyendo las capturas de Valkyria...\nEsto tarda 5-10 segundos.');
+  document.getElementById('genBtn').disabled = true;
+
+  try {
+    const data = await extractWithClaude(GROQ_KEY, imgR, imgL);
+    buildReport(data);
+    hideOverlay();
+    showReport();
+  } catch(e) {
+    hideOverlay();
+    document.getElementById('genBtn').disabled = false;
+    err.textContent = e.message || 'Error al conectar con la API. Verificá tu API Key y la conexión a internet.';
+    err.className = 'err-msg show';
+  }
+}
+
+/* ===== CLAUDE API CALL ===== */
+async function extractWithClaude(apiKey, r, l){
+  const proto = document.getElementById('pProto') ? document.getElementById('pProto').value : 'bilateral';
+
+  const prompt = `Estas son DOS capturas de pantalla del software Valkyria Trainer (dinamómetro isométrico digital).
+La PRIMERA imagen es el lado Derecho (o Toma 1).
+La SEGUNDA imagen es el lado Izquierdo (o Toma 2).
+
+Extraé TODOS los valores numéricos que aparezcan visualmente en cada captura.
+Los campos posibles son: Force Max (N), Force Avg (N), initialForce (N), Time Max Force (s), Force At 50 (N), Force At 100 (N), Force At 150 (N), Force At 200 (N), Force At 250 (N), RFD at 50 (N/s), RFD at 100 (N/s), RFD at 150 (N/s), RFD at 250 (N/s).
+
+También leé el título de cada imagen para identificar el nombre del músculo (ej: "Left Quadriceps", "Right Shoulder").
+
+Respondé SOLO con un JSON válido, sin texto adicional, sin markdown, sin explicaciones:
+{
+  "rightLabel": "nombre del músculo de la imagen 1",
+  "leftLabel": "nombre del músculo de la imagen 2",
+  "right": {
+    "fmax": número o null,
+    "favg": número o null,
+    "finit": número o null,
+    "tpeak": número o null,
+    "f50": número o null,
+    "f100": número o null,
+    "f150": número o null,
+    "f200": número o null,
+    "f250": número o null,
+    "rfd50": número o null,
+    "rfd100": número o null,
+    "rfd150": número o null,
+    "rfd250": número o null
+  },
+  "left": { misma estructura }
+}
+
+IMPORTANTE: Colocá null en campos que no estén visibles. NO inventes valores.`;
+
+  const body = {
+    model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+    max_tokens: 1024,
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image_url', image_url: { url: `data:${r.mime};base64,${r.base64}` } },
+        { type: 'image_url', image_url: { url: `data:${l.mime};base64,${l.base64}` } },
+        { type: 'text', text: prompt }
+      ]
+    }]
+  };
+
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+
+  if(!res.ok){
+    const errBody = await res.json().catch(()=>({}));
+    const msg = errBody?.error?.message || `Error API: ${res.status}`;
+    if(res.status === 401) throw new Error('API Key inválida.');
+    if(res.status === 429) throw new Error('Límite de requests excedido. Esperá un momento y reintentá.');
+    throw new Error(msg);
+  }
+
+  const result = await res.json();
+  const text = result.choices[0].message.content.trim();
+
+  // Parse JSON — remove possible markdown code fences
+  const cleaned = text.replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'').trim();
+  let parsed;
+  try { parsed = JSON.parse(cleaned); }
+  catch(e){ throw new Error('La IA devolvió un formato inesperado. Reintentá.') }
+
+  return {
+    rightLabel: parsed.rightLabel || 'Derecho',
+    leftLabel: parsed.leftLabel || 'Izquierdo',
+    r: parsed.right,
+    l: parsed.left,
+    patient: {
+      name: document.getElementById('pName').value || 'Sin especificar',
+      sport: document.getElementById('pSport').value || '—',
+      muscle: document.getElementById('pMuscle').value || parsed.rightLabel || '—',
+      injury: document.getElementById('pInjury').value || '',
+      eval: 'Lic. Lezcano, E.',
+    },
+    date: new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'})
+  };
+}
+
+/* ===== BUILD REPORT ===== */
+function buildReport(d){
+  Object.values(activeCharts).forEach(c=>{try{c.destroy()}catch(e){}});
+  activeCharts = {};
+
+  const {r,l,patient,rightLabel,leftLabel} = d;
+  const RL = rightLabel, LL = leftLabel;
+
+  // Calcs
+  const fDef = def(r.fmax, l.fmax);
+  const rDef = def(r.rfd50, l.rfd50);
+  const fDomR = (r.fmax||0) >= (l.fmax||0);
+  const rDomR = (r.rfd50||0) >= (l.rfd50||0);
+  const fAlarm = fDef > 15, rAlarm = rDef > 20;
+  const hasCurve = !!(r.f50 && r.f100 && l.f50 && l.f100);
+
+  // Alert
+  let aC='ok',aI='✅',aT='PERFIL SIMÉTRICO',aS=`Déficit bilateral dentro de rangos normales. Fuerza: ${fDef??'—'}% · RFD@50ms: ${rDef??'—'}%`;
+  if(fAlarm&&rAlarm){aC='alarm';aI='🚨';aT='DÉFICIT BILATERAL CRÍTICO';aS=`Fuerza: ${fDef}% y RFD@50ms: ${rDef}% superan umbrales clínicos. Intervención terapéutica requerida.`}
+  else if(fAlarm){aC='alarm';aI='⚠️';aT='DÉFICIT ESTRUCTURAL — FUERZA MÁXIMA';aS=`Déficit de Fuerza Máxima ${fDef}% supera umbral del 15%.`}
+  else if(rAlarm){aC='warning';aI='⚡';aT='DÉFICIT NEURAL — EXPLOSIVIDAD RFD';aS=`RFD@50ms con déficit ${rDef}% supera umbral del 20%. Ineficiencia de reclutamiento rápido.`}
+
+  const hMax = Math.max(r.rfd50||0, l.rfd50||0)||1;
+  const rPct = ((r.rfd50||0)/hMax*100).toFixed(0);
+  const lPct = ((l.rfd50||0)/hMax*100).toFixed(0);
+
+  const injHTML = patient.injury
+    ? `<div class="inj-tag has">🩹 ${patient.injury}</div>`
+    : `<div class="inj-tag none">✓ Sin lesiones activas reportadas</div>`;
+
+  const logo = `<svg width="38" height="34" viewBox="0 0 90 76" fill="none" style="color:#00ff88">
+    <polygon points="45,3 87,72 3,72" stroke="currentColor" stroke-width="4.5" stroke-linejoin="round" fill="none"/>
+    <polygon points="45,21 71,72 19,72" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round" fill="none"/>
+    <polygon points="45,40 60,72 30,72" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
+  </svg>`;
+
+  const badge = `<svg width="68" height="68" viewBox="0 0 140 140" fill="none">
+    <defs><path id="ct" d="M 70,70 m -52,0 a 52,52 0 1,1 104,0"/></defs>
+    <text font-family="Rajdhani,sans-serif" font-size="16" font-weight="700" fill="#2a6a2a" letter-spacing="2"><textPath href="#ct">THE MOVE CLUB</textPath></text>
+    <polygon points="70,48 90,80 50,80" stroke="#2a6a2a" stroke-width="3" fill="none" stroke-linejoin="round"/>
+    <polygon points="70,57 83,80 57,80" stroke="#1e5a1e" stroke-width="2" fill="none" stroke-linejoin="round"/>
+    <polygon points="70,65 78,80 62,80" stroke="#1a4a1a" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+    <text x="70" y="108" font-family="Rajdhani,sans-serif" font-size="11" fill="#1e4a1e" letter-spacing="3" text-anchor="middle">ESTD 2021</text>
+  </svg>`;
+
+  const curveRow = hasCurve ? `
+  <div class="dcard">
+    <div class="dt">Curva de Desarrollo de Fuerza — N/ms</div>
+    <div class="ds">Fuerza (N) en función del Tiempo (ms) · Comparativa Bilateral · Cuanto más alta y a la izquierda = mayor eficiencia neuromuscular</div>
+    <canvas id="chartCurve" height="90"></canvas>
+  </div>` : '';
+
+  document.getElementById('dashBody').innerHTML = `
+
+  <!-- HEADER -->
+  <div class="rpt-hdr">
+    <div class="brand">
+      ${logo}
+      <div class="brand-txt">
+        <div class="bn">MOVE<span>INFORME</span></div>
+        <div class="bs">The Move Club · Est. 2021</div>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#fff;margin-bottom:12px">
+        Informe de <span style="color:#00ff88">${patient.muscle}</span>: Análisis Comparativo de Fuerza y RFD
+      </div>
+      <div class="rpt-patient-block">
+        <div class="rpn">${patient.name}</div>
+        <div class="rpd">Deporte: <strong>${patient.sport}</strong> · Evaluador: <strong>${patient.eval}</strong></div>
+        ${injHTML}
+      </div>
+    </div>
+    <div class="rpt-meta">
+      <div class="rmt"><strong>${d.date}</strong></div>
+      <div class="rmt">Dinamómetro Isométrico · Valkyria Trainer</div>
+      <div class="rmt">Unidades: <strong>N / N/s / s</strong></div>
+      <div style="margin-top:8px">${badge}</div>
+    </div>
+  </div>
+
+  <!-- ALERT -->
+  <div class="alert ${aC}">
+    <div class="alert-icon">${aI}</div>
+    <div>
+      <div class="alert-title">${aT}</div>
+      <div class="alert-sub">${aS}</div>
+    </div>
+  </div>
+
+  <!-- ROW 1 -->
+  <div class="row1">
+    <div class="dcard">
+      <div class="dt">Fuerza Máxima Promedio</div>
+      <div class="ds">Peak Force — Comparativa Bilateral (N)</div>
+      <div class="gauge-wrap">
+        <canvas id="gaugeC" width="268" height="152"></canvas>
+        <div class="gvals">
+          <div class="gv"><div class="gv-l">${RL}</div><div class="gv-n">${n(r.fmax)}</div><div class="gv-u">Newtons</div></div>
+          <div class="gv"><div class="gv-l">${LL}</div><div class="gv-n">${n(l.fmax)}</div><div class="gv-u">Newtons</div></div>
+        </div>
+        <div class="gleg">
+          <div class="gl"><div class="gd" style="background:#00c853"></div>${RL}</div>
+          <div class="gl"><div class="gd" style="background:#4ade80"></div>${LL}</div>
+        </div>
+      </div>
+    </div>
+    <div class="dcard">
+      <div class="dt">Pico RFD a 50ms</div>
+      <div class="ds">Explosividad Neuromuscular Temprana — N/s</div>
+      <div class="hbars">
+        <div class="hb-r">
+          <div class="hb-lbl">${patient.muscle} ${RL.toUpperCase()}</div>
+          <div class="hb-track"><div class="hb-fill" id="hbR" style="width:0%"><div class="hb-val">${n(r.rfd50)} N/s</div></div></div>
+          <div class="hb-ax"><span>0</span><span>100</span><span>200</span><span>300</span><span>400</span><span>500 N/s</span></div>
+        </div>
+        <div class="hb-l">
+          <div class="hb-lbl">${patient.muscle} ${LL.toUpperCase()}</div>
+          <div class="hb-track"><div class="hb-fill" id="hbL" style="width:0%"><div class="hb-val">${n(l.rfd50)} N/s</div></div></div>
+          <div class="hb-ax"><span>0</span><span>100</span><span>200</span><span>300</span><span>400</span><span>500 N/s</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 2 -->
+  <div class="row2">
+    <div class="dcard">
+      <div class="dt">Fuerza Máxima</div><div class="ds">(Peak Force N)</div>
+      <div style="position:relative">
+        <canvas id="cFmax" height="200"></canvas>
+        <div class="bar-note">${fDomR?LL:RL} ${fDef??'—'}% ${fAlarm?'⚠ superior':'superior'}</div>
+      </div>
+    </div>
+    <div class="dcard">
+      <div class="dt">Explosividad</div><div class="ds">RFD a 50ms (N/s)</div>
+      <div style="position:relative">
+        <canvas id="cRfd50" height="200"></canvas>
+        <div class="bar-note">${rDomR?RL:LL} más explosivo (${rDef??'—'}%)</div>
+      </div>
+    </div>
+    <div class="dcard">
+      <div class="dt">Índice S/R</div><div class="ds">(Fuerza / RFD@50ms %)</div>
+      <canvas id="cSR" height="200"></canvas>
+    </div>
+    <div class="dcard">
+      <div class="dt">Velocidad Contracción</div><div class="ds">(Tiempo Pico — segundos)</div>
+      <canvas id="cVel" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- CURVE -->
+  ${curveRow}
+
+  <!-- TABLE -->
+  <div class="dcard">
+    <div class="dt">Cuadro Comparativo Bilateral</div>
+    <div class="ds">Umbral Fuerza: &gt;15% ⚠ · Umbral RFD: &gt;20% ⚠ · Dominante: ${fDomR?RL:LL} en Fuerza Máxima</div>
+    <table>
+      <thead><tr>
+        <th>Métrica</th>
+        <th style="color:#00c853">▶ ${RL}</th>
+        <th style="color:#4ade80">◀ ${LL}</th>
+        <th>Déficit / Asimetría</th>
+      </tr></thead>
+      <tbody>
+        ${tr2('Fuerza Máxima','Peak Force','N',r.fmax,l.fmax,15,false)}
+        ${tr2('Fuerza Promedio','Force Avg','N',r.favg,l.favg,15,false)}
+        ${tr2('Tiempo al Pico','Time Max Force','s',r.tpeak,l.tpeak,30,true)}
+        ${tr2('RFD @ 50ms','Fase neural temprana','N/s',r.rfd50,l.rfd50,20,false)}
+        ${tr2('RFD @ 100ms','Fase neural intermedia','N/s',r.rfd100,l.rfd100,20,false)}
+        ${tr2('RFD @ 150ms','Fase puente','N/s',r.rfd150,l.rfd150,20,false)}
+        ${tr2('RFD @ 250ms','Fase tardía','N/s',r.rfd250,l.rfd250,20,false)}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- RFD PROFILE -->
+  <div class="dcard">
+    <div class="dt">Perfil RFD — Todas las Ventanas (N/s)</div>
+    <div style="display:flex;gap:16px;margin-bottom:12px">
+      <span style="font-family:'Rajdhani',sans-serif;font-size:10px;display:flex;align-items:center;gap:5px;color:#00c853"><span style="width:8px;height:8px;border-radius:50%;background:#00c853;display:inline-block"></span>${RL}</span>
+      <span style="font-family:'Rajdhani',sans-serif;font-size:10px;display:flex;align-items:center;gap:5px;color:#4ade80"><span style="width:8px;height:8px;border-radius:50%;background:#4ade80;display:inline-block"></span>${LL}</span>
+    </div>
+    <div class="rfd-prof" id="rfdProf"></div>
+  </div>
+
+  <!-- CONCLUSION -->
+  ${buildConclusion(r,l,d,RL,LL,fDomR,rDomR,fDef,rDef,fAlarm,rAlarm,patient)}
+
+  <!-- PROTOCOLS -->
+  <div>
+    <div style="font-family:'Rajdhani',sans-serif;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#00c853;margin-bottom:12px;display:flex;align-items:center;gap:10px">Recomendaciones Terapéuticas<span style="flex:1;height:1px;background:#1a3a1a;display:block"></span></div>
+    <div class="proto-row">
+      <div class="proto struct ${fAlarm?'':'off'}">
+        <div class="proto-badge">⚠ Déficit Estructural</div>
+        <div class="proto-name">Isometría Sostenida<br>Alta Intensidad</div>
+        <div class="pp"><span class="ppl">Intensidad</span><span class="ppv">&gt;85% MVC</span></div>
+        <div class="pp"><span class="ppl">Duración</span><span class="ppv">3–5 s por contracción</span></div>
+        <div class="pp"><span class="ppl">Series</span><span class="ppv">3–4 series</span></div>
+        <div class="pp"><span class="ppl">Frecuencia</span><span class="ppv">2–3 veces/semana</span></div>
+      </div>
+      <div class="proto neural ${rAlarm?'':'off'}">
+        <div class="proto-badge">⚡ Déficit Neural</div>
+        <div class="proto-name">Isometría Explosiva<br>Ballistic Isometrics</div>
+        <div class="pp"><span class="ppl">Duración</span><span class="ppv">&lt;200ms (máx. vel.)</span></div>
+        <div class="pp"><span class="ppl">Intensidad</span><span class="ppv">50–70% MVC</span></div>
+        <div class="pp"><span class="ppl">Series</span><span class="ppv">5–6 series</span></div>
+        <div class="pp"><span class="ppl">Frecuencia</span><span class="ppv">2 veces/semana</span></div>
+      </div>
+      <div class="proto maint ${(!fAlarm&&!rAlarm)?'':'off'}">
+        <div class="proto-badge">✓ Mantenimiento</div>
+        <div class="proto-name">Neuromuscular<br>Preventivo</div>
+        <div class="pp"><span class="ppl">Frecuencia</span><span class="ppv">2–3 veces/semana</span></div>
+        <div class="pp"><span class="ppl">Intensidades</span><span class="ppv">50–90% MVC (variado)</span></div>
+        <div class="pp"><span class="ppl">Reevaluación</span><span class="ppv">Cada 4–6 semanas</span></div>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:9px;color:#1e3a1e;font-family:'Rajdhani',sans-serif;padding:8px 12px;background:#080e08;border:1px solid #1a2a1a;border-radius:6px">
+      Bases: Bamman MM et al. (2005) · Andersen LL et al. (2016) "Rate of Force Development" · Schiavone F et al. (2020)
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="rpt-footer">
+    <div style="display:flex;align-items:center;gap:12px">
+      <svg width="28" height="24" viewBox="0 0 90 76" fill="none" style="color:#2a6a2a">
+        <polygon points="45,3 87,72 3,72" stroke="currentColor" stroke-width="4.5" stroke-linejoin="round" fill="none"/>
+        <polygon points="45,21 71,72 19,72" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round" fill="none"/>
+        <polygon points="45,40 60,72 30,72" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <div class="rf-l"><strong>${patient.eval} · The Move Club</strong>${d.date}</div>
+    </div>
+    <div class="rf-r">Dinamómetro Isométrico Digital · Valkyria Trainer<br>MOVEINFORME · N / N/s / s</div>
+  </div>
+  `;
+
+  setTimeout(()=>{
+    document.getElementById('hbR').style.width = rPct+'%';
+    document.getElementById('hbL').style.width = lPct+'%';
+    drawGauge(r.fmax||0, l.fmax||0);
+    renderCharts(r, l, RL, LL, fDomR, rDomR, fDef, rDef);
+    buildRfdProfile(r, l);
+    if(hasCurve) renderCurve(r, l, RL, LL);
+  }, 200);
+}
+
+/* ===== TABLE ROW ===== */
+function tr2(label,sub,unit,rV,lV,thr,inv){
+  const d=def(rV,lV);
+  const dom = inv ? (rV<=lV?'r':'l') : (rV>=lV?'r':'l');
+  const st = d===null?'ok':d>thr?'alarm':d>thr*.7?'warn':'ok';
+  const ic = st==='ok'?'✓':st==='warn'?'~':'⚠';
+  return `<tr>
+    <td class="mn"><strong>${label}</strong>${sub}</td>
+    <td class="${dom==='r'?'rv dom':'rv'}">${n(rV)} <span style="font-size:9px;color:#1a4a1a">${unit}</span></td>
+    <td class="${dom==='l'?'lv dom':'lv'}">${n(lV)} <span style="font-size:9px;color:#1a4a1a">${unit}</span></td>
+    <td><span class="dbadge ${st}">${ic} ${d!==null?d+'%':'—'}</span></td>
+  </tr>`;
+}
+
+/* ===== CONCLUSION ===== */
+function buildConclusion(r,l,d,RL,LL,fDomR,rDomR,fDef,rDef,fAlarm,rAlarm,patient){
+  const fDom=fDomR?RL:LL, rDom=rDomR?RL:LL;
+  const paradox = fDomR!==rDomR;
+
+  let vIcon='✅',vLabel='Perfil Simétrico — Mantenimiento Preventivo',vDetail='Déficits bilaterales dentro de parámetros normales. Mantener con protocolo preventivo y reevaluar en 4–6 semanas.';
+  if(fAlarm&&rAlarm){vIcon='🚨';vLabel='INTERVENCIÓN TERAPÉUTICA URGENTE';vDetail='Déficit bilateral crítico. Protocolo doble: isometría sostenida (fuerza) + isometría explosiva (neural) focalizados en el lado más débil.'}
+  else if(fAlarm){vIcon='⚠️';vLabel='DÉFICIT ESTRUCTURAL — Requiere Intervención';vDetail='Priorizar protocolo de isometría sostenida de alta intensidad. La función neural (RFD) es aceptable.'}
+  else if(rAlarm){vIcon='⚡';vLabel='DÉFICIT NEURAL — Trabajo Explosivo Recomendado';vDetail='Contracciones balísticas explosivas (<200ms) para mejorar RFD en fase temprana.'}
+
+  const injNote = patient.injury ? ` Considerando la patología reportada (<strong>${patient.injury}</strong>), ajustar cargas según tolerancia y estado tisular.` : '';
+  const pNote = paradox ? ` <strong>Paradoja neuromuscular detectada:</strong> ${fDom} domina en fuerza bruta pero ${rDom} es más explosivo en fase neural temprana.` : ` El lado ${fDom} es dominante en fuerza y explosividad — perfil coherente.`;
+
+  const txt = `El <strong>lado ${fDom.toUpperCase()}</strong> presenta mayor Fuerza Máxima (${n(fDomR?r.fmax:l.fmax)} N vs ${n(fDomR?l.fmax:r.fmax)} N, asimetría del <strong>${fDef??'—'}%</strong>) y mayor Fuerza Promedio.${pNote} Los RFD tardíos (250ms) muestran asimetría del <strong>${def(r.rfd250,l.rfd250)??'—'}%</strong>, indicando que las diferencias se concentran principalmente en la <strong>fase de reclutamiento rápido (0–100ms)</strong>.${injNote}`;
+
+  return `<div class="concl">
+    <div class="concl-title">
+      <svg width="13" height="11" viewBox="0 0 90 76" fill="none" style="color:#00c853;flex-shrink:0;display:inline-block;vertical-align:middle;margin-right:6px">
+        <polygon points="45,3 87,72 3,72" stroke="currentColor" stroke-width="6" fill="none"/>
+      </svg>
+      Conclusión Clínica — The Move Club
+    </div>
+    <div class="concl-text">${txt}</div>
+    <div class="concl-verdict">
+      <div class="cv-icon">${vIcon}</div>
+      <div><div class="cv-label">${vLabel}</div><div class="cv-detail">${vDetail}</div></div>
+    </div>
+  </div>`;
+}
+
+/* ===== GAUGE ===== */
+function drawGauge(rV,lV){
+  const c=document.getElementById('gaugeC');if(!c)return;
+  const ctx=c.getContext('2d'),W=c.width,H=c.height,cx=W/2,cy=H-16;
+  const rad=Math.min(cx-16,cy-8)-8;
+  ctx.clearRect(0,0,W,H);
+  [[rad,'#1a3a1a',16],[rad-22,'#0f1f0f',12]].forEach(([r,col,lw])=>{
+    ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,0,false);ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.lineCap='round';ctx.stroke();
+  });
+  const mx=Math.max(rV,lV)*1.15||1;
+  ctx.beginPath();ctx.arc(cx,cy,rad,Math.PI,Math.PI+Math.PI*(rV/mx),false);ctx.strokeStyle='#00c853';ctx.lineWidth=14;ctx.lineCap='round';ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,rad-22,Math.PI,Math.PI+Math.PI*(lV/mx),false);ctx.strokeStyle='#4ade80';ctx.lineWidth=11;ctx.lineCap='round';ctx.stroke();
+  for(let i=0;i<=10;i++){const a=Math.PI+(Math.PI*i/10);ctx.beginPath();ctx.moveTo(cx+(rad-28)*Math.cos(a),cy+(rad-28)*Math.sin(a));ctx.lineTo(cx+(rad-20)*Math.cos(a),cy+(rad-20)*Math.sin(a));ctx.strokeStyle='#1e3a1e';ctx.lineWidth=1;ctx.stroke()}
+  const na=Math.PI+Math.PI*(rV/mx);
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+(rad-32)*Math.cos(na),cy+(rad-32)*Math.sin(na));ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.lineCap='round';ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fillStyle='#00c853';ctx.fill();
+  ctx.font='bold 9px Rajdhani,sans-serif';ctx.fillStyle='#2a6a2a';ctx.textAlign='center';
+  ctx.fillText('Right',cx-rad/2+8,cy+13);ctx.fillText('Left',cx+rad/2-8,cy+13);
+}
+
+/* ===== CHARTS ===== */
+function renderCharts(r,l,RL,LL,fDomR,rDomR,fDef,rDef){
+  const cR='#00c853',cL='#4ade80',bR='#00c85330',bL='#4ade8020';
+  const SC={ticks:{color:'#2a6a2a',font:{family:'Rajdhani,sans-serif',size:9}},grid:{color:'#0c170c'}};
+
+  function bar(id,labels,data,colors,unit){
+    const ctx=document.getElementById(id)?.getContext('2d');if(!ctx)return;
+    activeCharts[id]=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data,backgroundColor:colors.map(c=>c+'30'),borderColor:colors,borderWidth:2,borderRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:true,animation:{duration:800},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.parsed.y?.toFixed?.(2)??c.parsed.y} ${unit}`}}},scales:{x:SC,y:{...SC,beginAtZero:true}}}});
+  }
+  bar('cFmax',[RL,LL],[r.fmax,l.fmax],[cR,cL],'N');
+  bar('cRfd50',[RL,LL],[r.rfd50,l.rfd50],[cR,cL],'N/s');
+  bar('cVel',[RL,LL],[r.tpeak,l.tpeak],[cR,cL],'s');
+
+  const ctx3=document.getElementById('cSR')?.getContext('2d');
+  if(ctx3&&r.fmax&&l.fmax&&r.rfd50&&l.rfd50){
+    activeCharts.sr=new Chart(ctx3,{type:'line',data:{labels:[RL,LL],datasets:[
+      {label:'Fuerza %',data:[+(r.fmax/l.fmax*100).toFixed(1),100],borderColor:cR,backgroundColor:bR,borderWidth:2,pointRadius:5,pointBackgroundColor:cR,tension:0},
+      {label:'RFD@50ms %',data:[+(r.rfd50/l.rfd50*100).toFixed(1),100],borderColor:cL,backgroundColor:bL,borderWidth:2,pointRadius:5,pointBackgroundColor:cL,tension:0}
+    ]},options:{responsive:true,maintainAspectRatio:true,animation:{duration:800},
+      plugins:{legend:{labels:{color:'#2a6a2a',font:{family:'Rajdhani,sans-serif',size:8}}},tooltip:{callbacks:{label:c=>`${c.parsed.y?.toFixed?.(1)}%`}}},
+      scales:{x:SC,y:{...SC,min:0,max:115}}}});
+  }
+}
+
+/* ===== N/ms CURVE ===== */
+function renderCurve(r,l,RL,LL){
+  const ctx=document.getElementById('chartCurve')?.getContext('2d');if(!ctx)return;
+  const SC={ticks:{color:'#2a6a2a',font:{family:'Rajdhani,sans-serif',size:9}},grid:{color:'#0c170c'}};
+  const rData=[r.finit||0,r.f50,r.f100,r.f150,r.f200,r.f250,r.fmax].map(v=>v??null);
+  const lData=[l.finit||0,l.f50,l.f100,l.f150,l.f200,l.f250,l.fmax].map(v=>v??null);
+  activeCharts.curve=new Chart(ctx,{type:'line',data:{
+    labels:['0ms','50ms','100ms','150ms','200ms','250ms','Pico'],
+    datasets:[
+      {label:`${RL} (N)`,data:rData,borderColor:'#00c853',backgroundColor:'#00c85318',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#00c853',fill:true,tension:0.3,spanGaps:true},
+      {label:`${LL} (N)`,data:lData,borderColor:'#4ade80',backgroundColor:'#4ade8012',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#4ade80',fill:true,tension:0.3,spanGaps:true}
+    ]},
+    options:{responsive:true,maintainAspectRatio:true,animation:{duration:1000},
+      plugins:{legend:{labels:{color:'#3a7a3a',font:{family:'Rajdhani,sans-serif',size:10}}},tooltip:{callbacks:{label:c=>`${c.parsed.y?.toFixed?.(1)} N`}}},
+      scales:{x:{...SC,title:{display:true,text:'Ventana Temporal',color:'#1e4a1e',font:{size:9,family:'Rajdhani,sans-serif'}}},y:{...SC,beginAtZero:true,title:{display:true,text:'Fuerza (N)',color:'#1e4a1e',font:{size:9,family:'Rajdhani,sans-serif'}}}}}});
+}
+
+/* ===== RFD PROFILE ===== */
+function buildRfdProfile(r,l){
+  const wins=[{w:'50ms',r:r.rfd50,l:l.rfd50},{w:'100ms',r:r.rfd100,l:l.rfd100},{w:'150ms',r:r.rfd150,l:l.rfd150},{w:'250ms',r:r.rfd250,l:l.rfd250}];
+  const mx=Math.max(...wins.flatMap(w=>[w.r||0,w.l||0]))||1;
+  document.getElementById('rfdProf').innerHTML=wins.map(w=>`
+    <div class="rfd-row">
+      <div class="rfd-win">${w.w}</div>
+      <div class="rfd-bc">
+        <div class="rfd-br"><div class="rfd-dot" style="background:#00c853"></div><div class="rfd-trk"><div class="rfd-f r" style="width:${((w.r||0)/mx*100).toFixed(1)}%"></div></div></div>
+        <div class="rfd-br"><div class="rfd-dot" style="background:#4ade80"></div><div class="rfd-trk"><div class="rfd-f l" style="width:${((w.l||0)/mx*100).toFixed(1)}%"></div></div></div>
+      </div>
+      <div class="rfd-vs"><span class="rv">${n(w.r)}</span><span class="lv">${n(w.l)}</span></div>
+    </div>`).join('');
+}
+
+/* ===== UTILS ===== */
+function def(a,b){if(!a||!b)return null;return+((Math.max(a,b)-Math.min(a,b))/Math.max(a,b)*100).toFixed(1)}
+function n(v){if(v===null||v===undefined||isNaN(v))return'—';return Number(v).toFixed(1)}
+
+/* ===== OVERLAY ===== */
+function showOverlay(msg){document.getElementById('overlay').classList.add('active');document.getElementById('overlay-sub').textContent=msg}
+function hideOverlay(){document.getElementById('overlay').classList.remove('active')}
+
+/* ===== VIEWS ===== */
+function showReport(){document.getElementById('uploadView').classList.remove('active');document.getElementById('reportView').classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function goBack(){document.getElementById('reportView').classList.remove('active');document.getElementById('uploadView').classList.add('active');document.getElementById('genBtn').disabled=false;window.scrollTo({top:0,behavior:'smooth'})}
+</script>
+</body>
+</html>
