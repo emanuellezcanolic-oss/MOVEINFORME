@@ -253,29 +253,128 @@ td.dom{color:#fff;font-weight:700}
 
 /* ===== PRINT ===== */
 @media print{
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+
   body,html{background:#fff!important;color:#111!important}
   .topbar,.report-topbar,.overlay{display:none!important}
   #uploadView{display:none!important}
   #reportView{display:block!important}
   .view{display:block!important}
-  .dash{background:#fff!important}
-  .dcard,.concl,.proto,.rpt-hdr,.rpt-footer{background:#f8f8f8!important;border-color:#ddd!important}
+  .dash{background:#fff!important;min-height:auto!important}
+  .dash-body{padding:12px 14px!important;gap:10px!important}
+
+  /* Cards */
+  .dcard,.rpt-hdr,.rpt-footer{background:#f5f8f5!important;border:1px solid #c8d8c8!important}
   .dcard::before{display:none!important}
-  .hb-track{background:#eee!important;border-color:#ccc!important}
-  .hb-r .hb-fill{background:#1a7a3a!important}
-  .hb-l .hb-fill{background:#4aba6a!important}
-  .rfd-trk{background:#eee!important}
+  .concl{background:#f5f8f5!important;border:1px solid #c8d8c8!important;border-left:3px solid #1a6632!important}
+  .proto{background:#f9faf9!important;border:1px solid #c8d8c8!important}
+  .rpt-patient-block{background:#eef4ee!important;border:1px solid #c8d8c8!important}
+
+  /* Títulos de sección */
+  .dt{color:#111!important}
+  .ds{color:#445!important}
+
+  /* Brand / header */
+  .bn{color:#111!important}
+  .bn span{color:#1a6632!important}
+  .bs{color:#556!important}
+  .tlogo-name{color:#111!important}
+  .tlogo-name span{color:#1a6632!important}
+  .topbar-r{color:#778!important}
+
+  /* Paciente */
+  .rpn{color:#111!important}
+  .rpd{color:#445!important}
+  .rpd strong{color:#1a4a2a!important}
+  .rmt{color:#556!important}
+  .rmt strong{color:#111!important}
+
+  /* Tags de lesión */
+  .inj-tag.has{background:#ffeaea!important;border-color:#f99!important;color:#a00!important}
+  .inj-tag.none{background:#eaf4ea!important;border-color:#9c9!important;color:#1a5a2a!important}
+
+  /* Alert */
+  .alert.alarm{background:#ffeaea!important;border-color:#f99!important}
+  .alert.alarm .alert-title{color:#a00!important}
+  .alert.warning{background:#fff8ea!important;border-color:#e9c!important}
+  .alert.warning .alert-title{color:#7a4e00!important}
+  .alert.ok{background:#eaf4ea!important;border-color:#9c9!important}
+  .alert.ok .alert-title{color:#1a5a2a!important}
+  .alert-sub{color:#445!important}
+  .alert-icon{font-size:16px!important}
+
+  /* Gauge */
+  .gv-l{color:#556!important}
+  .gv-n{color:#111!important}
+  .gv-u{color:#778!important}
+  .gl{color:#334!important}
+
+  /* Barras horizontales */
+  .hb-lbl{color:#111!important}
+  .hb-track{background:#e8ece8!important;border-color:#c8d8c8!important}
+  .hb-r .hb-fill{background:linear-gradient(90deg,#2a7a3a,#1a9040)!important}
+  .hb-l .hb-fill{background:linear-gradient(90deg,#3a8a4a,#2aaa50)!important}
+  .hb-val{color:#fff!important}
+  .hb-ax{color:#9ab!important}
+  .bar-note{background:#eef4ee!important;border-color:#c8d8c8!important;color:#1a5a2a!important}
+
+  /* Tabla */
+  thead tr{background:#eef4ee!important}
+  th{color:#1a4a2a!important;border-color:#c8d8c8!important}
+  td{border-color:#dde8dd!important;color:#111!important}
+  td.mn{color:#445!important}
+  td.mn strong{color:#111!important}
+  td.rv{color:#1a6632!important}
+  td.lv{color:#2a8a4a!important}
+  td.dom{color:#111!important}
+  tr:hover td{background:#f5f8f5!important}
+
+  /* Badges */
+  .dbadge.ok{background:#eaf4ea!important;border-color:#9c9!important;color:#1a5a2a!important}
+  .dbadge.warn{background:#fff8ea!important;border-color:#e9c!important;color:#7a4e00!important}
+  .dbadge.alarm{background:#ffeaea!important;border-color:#f99!important;color:#a00!important}
+
+  /* Perfil TDF */
+  .rfd-win{color:#334!important}
+  .rfd-trk{background:#e8ece8!important;border-color:#c8d8c8!important}
   .rfd-f.r{background:#1a7a3a!important}
-  .rfd-f.l{background:#4aba6a!important}
-  td{border-color:#ddd!important}
-  .rv{color:#006633!important}.lv{color:#2a8a4a!important}
-  .dbadge.alarm,.alert.alarm{background:#ffeeee!important;border-color:#ff9999!important;color:#cc0000!important}
-  .dbadge.ok,.alert.ok{background:#eeffee!important;border-color:#99cc99!important;color:#006633!important}
-  .dbadge.warn{background:#fff8ee!important;border-color:#ffddaa!important;color:#886600!important}
-  canvas{max-width:100%!important}
+  .rfd-f.l{background:#3a9a5a!important}
+  .rfd-vs .rv{color:#1a6632!important}
+  .rfd-vs .lv{color:#2a8a4a!important}
+
+  /* Conclusión */
+  .concl-title{color:#1a6632!important}
+  .concl-text{color:#223!important}
+  .concl-text strong{color:#111!important}
+  .concl-verdict{background:#eef4ee!important;border-color:#c8d8c8!important}
+  .cv-label{color:#111!important}
+  .cv-detail{color:#445!important}
+
+  /* Protocolos */
+  .proto-badge{opacity:1!important}
+  .proto.struct .proto-badge{background:#ffeaea!important;border-color:#f99!important;color:#a00!important}
+  .proto.neural .proto-badge{background:#fff8ea!important;border-color:#e9c!important;color:#7a4e00!important}
+  .proto.maint .proto-badge{background:#eaf4ea!important;border-color:#9c9!important;color:#1a5a2a!important}
+  .proto-name{color:#111!important}
+  .ppl{color:#445!important}
+  .ppv{color:#1a4a2a!important}
+  .pp{border-color:#dde8dd!important}
+  .proto.off{opacity:.45!important}
+
+  /* Footer */
+  .rf-l{color:#445!important}
+  .rf-l strong{color:#111!important}
+  .rf-r{color:#556!important}
+
+  /* Layout */
   .row2{grid-template-columns:1fr 1fr!important}
   .proto-row{grid-template-columns:1fr 1fr 1fr!important}
-  *{color-adjust:exact!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  canvas{max-width:100%!important}
+
+  /* Leyendas */
+  .gleg .gl{color:#334!important}
+  .rfd-dot[style*="00c853"]{background:#1a7a3a!important}
+  .rfd-dot[style*="4ade80"]{background:#3a9a5a!important}
 }
 
 @media(max-width:800px){
