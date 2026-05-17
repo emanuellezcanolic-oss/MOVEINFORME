@@ -455,7 +455,7 @@ td.dom{color:#fff;font-weight:700}
 
   <div class="upload-hero">
     <h1>THE MOVE <span>CLUB</span></h1>
-    <p>Cargá las 2 capturas de Valkyria → La IA lee los datos → Informe listo</p>
+    <p>Cargá 2 a 6 capturas de Valkyria → La IA detecta músculo y lado → Informe bilateral + ratios clínicos</p>
   </div>
 
   <!-- Patient quick info -->
@@ -487,30 +487,18 @@ td.dom{color:#fff;font-weight:700}
     </div>
   </div>
 
-  <!-- Image drop zones -->
-  <div class="drop-row">
-    <div class="drop r-drop" id="dropR"
-      ondragover="ov(event,'R')" ondragleave="ol(event,'R')" ondrop="od(event,'R')">
-      <input type="file" accept="image/*" onchange="onFile(event,'R')">
-      <div class="drop-label">IMAGEN 1</div>
-      <div class="drop-icon">📸</div>
-      <div class="drop-side">Imagen 1</div>
-      <div class="drop-hint">La IA detecta el lado automáticamente<br>Arrastrá o clic para seleccionar</div>
-      <img id="prevR" class="drop-preview" alt="">
-    </div>
-    <div class="drop l-drop" id="dropL"
-      ondragover="ov(event,'L')" ondragleave="ol(event,'L')" ondrop="od(event,'L')">
-      <input type="file" accept="image/*" onchange="onFile(event,'L')">
-      <div class="drop-label">IMAGEN 2</div>
-      <div class="drop-icon">📸</div>
-      <div class="drop-side">Imagen 2</div>
-      <div class="drop-hint">La IA detecta el lado automáticamente<br>Arrastrá o clic para seleccionar</div>
-      <img id="prevL" class="drop-preview" alt="">
-    </div>
+  <!-- Multi-image upload -->
+  <div class="multi-drop" id="multiDrop"
+       ondragover="multiOver(event)" ondragleave="multiLeave(event)" ondrop="multiDropFn(event)">
+    <input type="file" id="multiInput" accept="image/*" multiple onchange="onMultiFile(event)">
+    <div class="md-icon">📸</div>
+    <div class="md-title">Arrastrá entre 2 y 6 capturas de Valkyria</div>
+    <div class="md-sub">Isquiotibiales · Cuádriceps · Rotadores Externos/Internos · Remo Isométrico · Mid Thigh Push<br>La IA detecta músculo y lado automáticamente desde el título de cada imagen</div>
   </div>
+  <div id="imgCards" class="img-cards"></div>
 
   <div class="err-msg" id="errMsg"></div>
-  <button class="gen-btn" id="genBtn" onclick="generate()">
+  <button class="gen-btn" id="genBtn" onclick="generate()" style="display:none">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
     Analizar con IA y Generar Informe
   </button>
@@ -574,8 +562,8 @@ function getPhoto(dni){ return localStorage.getItem('prof_photo_'+dni) || (PROF_
 let currentUser = null;
 let selectedProf = null;
 
-let imgR = null, imgL = null;
-let profPhoto = null, instLogo = null;
+let uploadedImages = [];
+let profPhoto = null;
 let activeCharts = {};
 
 document.getElementById('topDate').textContent =
@@ -588,177 +576,178 @@ function setPhoto(e, type){
   const file = e.target.files[0]; if(!file) return;
   const reader = new FileReader();
   reader.onload = ev => {
-    const dataURL = ev.target.result;
     if(type === 'prof'){
-      profPhoto = dataURL;
-      document.getElementById('prevProf').src = dataURL;
+      profPhoto = ev.target.result;
+      document.getElementById('prevProf').src = ev.target.result;
       document.getElementById('photoProf').classList.add('loaded');
-    } else {
-      instLogo = dataURL;
-      document.getElementById('prevInst').src = dataURL;
-      document.getElementById('photoInst').classList.add('loaded');
     }
   };
   reader.readAsDataURL(file);
 }
 
-/* ===== DRAG & DROP ===== */
-function ov(e,s){e.preventDefault();document.getElementById('drop'+s).classList.add('over')}
-function ol(e,s){document.getElementById('drop'+s).classList.remove('over')}
-function od(e,s){e.preventDefault();ol(e,s);const f=e.dataTransfer.files[0];if(f)setImg(f,s)}
-function onFile(e,s){if(e.target.files[0])setImg(e.target.files[0],s)}
+/* ===== MULTI-IMAGE UPLOAD ===== */
+const MUSCLE_LABELS = {
+  QUAD:'Cuádriceps', HAM:'Isquiotibiales', EXT_ROT:'Rot. Externa',
+  INT_ROT:'Rot. Interna', ROW:'Remo Isométrico', MTP:'Mid Thigh Push', OTRO:'Otro'
+};
 
-function setImg(file, side){
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const dataURL = ev.target.result;
-    const base64 = dataURL.split(',')[1];
-    const mime = file.type || 'image/jpeg';
+function multiOver(e){e.preventDefault();document.getElementById('multiDrop').classList.add('over')}
+function multiLeave(e){document.getElementById('multiDrop').classList.remove('over')}
+function multiDropFn(e){e.preventDefault();multiLeave(e);Array.from(e.dataTransfer.files).forEach(addImage)}
+function onMultiFile(e){Array.from(e.target.files).forEach(addImage)}
 
-    if(side === 'R'){
-      imgR = { base64, mime };
-      document.getElementById('prevR').src = dataURL;
-      document.getElementById('dropR').classList.add('loaded');
-    } else {
-      imgL = { base64, mime };
-      document.getElementById('prevL').src = dataURL;
-      document.getElementById('dropL').classList.add('loaded');
-    }
+function addImage(file){
+  if(uploadedImages.length>=6)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    uploadedImages.push({dataURL:ev.target.result,base64:ev.target.result.split(',')[1],mime:file.type||'image/jpeg',muscleKey:null,muscleLabel:'...',side:null});
+    renderImgCards();
   };
   reader.readAsDataURL(file);
+}
+
+function removeImage(i){uploadedImages.splice(i,1);renderImgCards()}
+
+function renderImgCards(){
+  const grid=document.getElementById('imgCards');
+  const btn=document.getElementById('genBtn');
+  if(!uploadedImages.length){grid.innerHTML='';btn.style.display='none';return}
+  grid.innerHTML=uploadedImages.map((img,i)=>{
+    const muscleHtml=img.muscleLabel&&img.muscleLabel!=='...'
+      ?`<div class="img-card-muscle">${img.muscleLabel}</div><div class="img-card-side">${img.side==='R'?'Derecho':img.side==='L'?'Izquierdo':'Detectando...'}</div>`
+      :`<div class="img-card-muscle" style="color:#555">Procesando...</div>`;
+    return `<div class="img-card ${img.muscleLabel==='...'?'loading':''}">
+      <span class="img-card-remove" onclick="removeImage(${i})">×</span>
+      <img src="${img.dataURL}">
+      <div class="img-card-info">${muscleHtml}</div>
+    </div>`;
+  }).join('');
+  btn.style.display=uploadedImages.length>=2?'flex':'none';
 }
 
 /* ===== GENERATE ===== */
 async function generate(){
-  const err = document.getElementById('errMsg');
-  err.className = 'err-msg';
-
-  // Validations
-  if(!imgR && !imgL){
-    err.textContent = 'Cargá al menos una imagen de Valkyria para continuar.';
-    err.className = 'err-msg show'; return;
-  }
-  if(!imgR){
-    err.textContent = 'Falta la imagen del lado Derecho / Toma 1.';
-    err.className = 'err-msg show'; return;
-  }
-  if(!imgL){
-    err.textContent = 'Falta la imagen del lado Izquierdo / Toma 2.';
-    err.className = 'err-msg show'; return;
-  }
-
-  showOverlay('La IA está leyendo las capturas de Valkyria...\nEsto tarda 5-10 segundos.');
-  document.getElementById('genBtn').disabled = true;
-
-  try {
-    const data = await extractWithClaude(GROQ_KEY, imgR, imgL);
-    buildReport(data);
+  const err=document.getElementById('errMsg');
+  err.className='err-msg';
+  if(uploadedImages.length<2){err.textContent='Cargá al menos 2 capturas de Valkyria.';err.className='err-msg show';return}
+  showOverlay('La IA está analizando ${uploadedImages.length} capturas de Valkyria...
+Esto tarda 10-20 segundos.');
+  document.getElementById('genBtn').disabled=true;
+  try{
+    const patient={
+      name:document.getElementById('pName').value||'Sin especificar',
+      sport:document.getElementById('pSport').value||'—',
+      muscle:document.getElementById('pMuscle').value||'',
+      injury:document.getElementById('pInjury').value||'',
+      prof:document.getElementById('pProf').value||'Lic. Lezcano, E.',
+      profPhoto:profPhoto,
+    };
+    const data=await extractWithClaude(GROQ_KEY,uploadedImages,patient);
+    // Update card labels with detected info
+    if(data.resultados){
+      data.resultados.forEach((r,i)=>{
+        if(uploadedImages[i]){
+          uploadedImages[i].muscleKey=r.musculo_key;
+          uploadedImages[i].muscleLabel=MUSCLE_LABELS[r.musculo_key]||r.musculo_label||'Otro';
+          uploadedImages[i].side=r.lado;
+        }
+      });
+      renderImgCards();
+    }
+    buildReport(data,patient);
     hideOverlay();
     showReport();
-  } catch(e) {
+  }catch(e){
     hideOverlay();
-    document.getElementById('genBtn').disabled = false;
-    err.textContent = e.message || 'Error al conectar con la API. Verificá tu API Key y la conexión a internet.';
-    err.className = 'err-msg show';
+    document.getElementById('genBtn').disabled=false;
+    err.textContent=e.message||'Error al conectar con la API.';
+    err.className='err-msg show';
   }
 }
 
-/* ===== CLAUDE API CALL ===== */
-async function extractWithClaude(apiKey, r, l){
-  const proto = document.getElementById('pProto') ? document.getElementById('pProto').value : 'bilateral';
+/* ===== CLAUDE API CALL — MULTI-IMAGE ===== */
+async function extractWithClaude(apiKey, images, patient){
+  const imgCount = images.length;
+  const prompt = `Sos experto en evaluación isométrica con Valkyria Trainer. Analizá las ${imgCount} imágenes enviadas.
 
-  const prompt = `Analizá AMBAS imágenes del software Valkyria Trainer (dinamómetro isométrico).
+Para CADA imagen identificá:
+1. MÚSCULO — usá exactamente uno de estos keys:
+   QUAD = Cuádriceps / Quadriceps / Mid Thigh Push
+   HAM = Isquiotibiales / Hamstrings
+   EXT_ROT = Rotación Externa / External Rotation
+   INT_ROT = Rotación Interna / Internal Rotation
+   ROW = Remo Isométrico / Isometric Row
+   MTP = Mid Thigh Pull (distinto de push)
+   OTRO = cualquier otro músculo
 
-PASO 1 — DETECTÁ EL LADO: Leé el título o encabezado de cada imagen para determinar si corresponde al lado DERECHO o IZQUIERDO. Buscá palabras como "Right", "Left", "Derecho", "Izquierdo" o el nombre del músculo con lateralidad (ej: "Right Quadriceps", "Left Hamstring"). La primera imagen puede ser cualquier lado — determinalo vos leyendo la imagen.
+2. LADO — R (Derecho/Right) o L (Izquierdo/Left). Leé el título de la imagen. Si no podés determinar el lado, usá "DESCONOCIDO".
 
-PASO 2 — EXTRAÉ LOS DATOS: Para cada imagen, extraé TODOS los valores numéricos visibles. Los campos son: Force Max (N), Force Avg (N), Initial Force (N), Time Max Force (s), Force At 50 (N), Force At 100 (N), Force At 150 (N), Force At 200 (N), Force At 250 (N), RFD at 50 (N/s), RFD at 100 (N/s), RFD at 150 (N/s), RFD at 250 (N/s).
+3. MÉTRICAS — extraé TODOS los valores numéricos visibles: Force Max, Force Avg, Initial Force, Time Max Force, Force@50ms, Force@100ms, Force@150ms, Force@200ms, Force@250ms, RFD@50ms, RFD@100ms, RFD@150ms, RFD@250ms.
 
-PASO 3 — IDENTIFICÁ EL MÚSCULO: Leé el nombre del músculo evaluado en español (ej: "Cuádriceps", "Isquiotibiales", "Rotadores Internos de Hombro").
-
-Respondé SOLO con JSON válido, sin texto adicional, sin markdown:
+Respondé SOLO con JSON válido, sin texto ni markdown:
 {
-  "musculo": "nombre del músculo en español",
-  "rightLabel": "Derecho",
-  "leftLabel": "Izquierdo",
-  "right": {
-    "fmax": número o null,
-    "favg": número o null,
-    "finit": número o null,
-    "tpeak": número o null,
-    "f50": número o null,
-    "f100": número o null,
-    "f150": número o null,
-    "f200": número o null,
-    "f250": número o null,
-    "rfd50": número o null,
-    "rfd100": número o null,
-    "rfd150": número o null,
-    "rfd250": número o null
-  },
-  "left": { misma estructura }
+  "musculo_global": "Nombre descriptivo del test (ej: Rotadores de Hombro, Isquiotibiales Bilateral)",
+  "resultados": [
+    {
+      "imagen": 1,
+      "musculo_key": "QUAD",
+      "musculo_label": "Cuádriceps Derecho",
+      "lado": "R",
+      "metrics": {
+        "fmax": número_o_null, "favg": número_o_null, "finit": número_o_null,
+        "tpeak": número_o_null,
+        "f50": número_o_null, "f100": número_o_null, "f150": número_o_null,
+        "f200": número_o_null, "f250": número_o_null,
+        "rfd50": número_o_null, "rfd100": número_o_null,
+        "rfd150": número_o_null, "rfd250": número_o_null
+      }
+    }
+  ]
 }
+REGLA CRÍTICA: un objeto por imagen, en el MISMO ORDEN que las recibiste. Nunca inventes valores — null si no es visible.`;
 
-IMPORTANTE: Asigná los datos al lado correcto según lo que leíste en la imagen. Colocá null en campos no visibles. NUNCA inventes valores.`;
+  const msgContent = [
+    ...images.map(img => ({
+      type:'image_url',
+      image_url:{url:`data:${img.mime};base64,${img.base64}`}
+    })),
+    {type:'text', text:prompt}
+  ];
 
   const body = {
-    model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-    max_tokens: 1024,
-    messages: [{
-      role: 'user',
-      content: [
-        { type: 'image_url', image_url: { url: `data:${r.mime};base64,${r.base64}` } },
-        { type: 'image_url', image_url: { url: `data:${l.mime};base64,${l.base64}` } },
-        { type: 'text', text: prompt }
-      ]
-    }]
+    model:'meta-llama/llama-4-scout-17b-16e-instruct',
+    max_tokens:2048,
+    messages:[{role:'user', content:msgContent}]
   };
 
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(body)
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions',{
+    method:'POST',
+    headers:{'Authorization':`Bearer ${apiKey}`,'Content-Type':'application/json'},
+    body:JSON.stringify(body)
   });
 
   if(!res.ok){
     const errBody = await res.json().catch(()=>({}));
     const msg = errBody?.error?.message || `Error API: ${res.status}`;
-    if(res.status === 401) throw new Error('API Key inválida.');
-    if(res.status === 429) throw new Error('Límite de requests excedido. Esperá un momento y reintentá.');
+    if(res.status===401) throw new Error('API Key inválida.');
+    if(res.status===429) throw new Error('Límite de requests excedido. Esperá un momento y reintentá.');
     throw new Error(msg);
   }
 
   const result = await res.json();
   const text = result.choices[0].message.content.trim();
-
-  // Parse JSON — remove possible markdown code fences
   const cleaned = text.replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'').trim();
-  let parsed;
-  try { parsed = JSON.parse(cleaned); }
-  catch(e){ throw new Error('La IA devolvió un formato inesperado. Reintentá.') }
-
-  return {
-    rightLabel: parsed.rightLabel || 'Derecho',
-    leftLabel: parsed.leftLabel || 'Izquierdo',
-    r: parsed.right,
-    l: parsed.left,
-    patient: {
-      name: document.getElementById('pName').value || 'Sin especificar',
-      sport: document.getElementById('pSport').value || '—',
-      muscle: document.getElementById('pMuscle').value || parsed.musculo || '—',
-      injury: document.getElementById('pInjury').value || '',
-      prof: document.getElementById('pProf').value || 'Profesional',
-      profPhoto: profPhoto,
-      instLogo: instLogo,
-    },
-    date: new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'})
-  };
+  try { return JSON.parse(cleaned); }
+  catch(e){
+    const m = cleaned.match(/\{[\s\S]*\}/);
+    if(m) try { return JSON.parse(m[0]); } catch(e2){}
+    throw new Error('La IA devolvió un formato inesperado. Reintentá.');
+  }
 }
 
+
 /* ===== BUILD REPORT ===== */
-function buildReport(d){
+function buildReportCore(d){
   Object.values(activeCharts).forEach(c=>{try{c.destroy()}catch(e){}});
   activeCharts = {};
 
@@ -1007,6 +996,199 @@ function buildReport(d){
     if(hasCurve) renderCurve(r, l, RL, LL);
   }, 200);
 }
+
+/* ===== CLINICAL THRESHOLDS ===== */
+const CLINICAL = {
+  HQ:{
+    alarm:0.50, warn:0.60, normal:'≥0.60',
+    refs:'van Dyk N et al. (2016). Am J Sports Med, 44(7):1789–1795 [Meta-análisis: 13 estudios prospectivos, n=8.319]; Croisier JL et al. (2008). Am J Sports Med, 36(2):233–240',
+    note:'Umbral H:Q convencional isocinético 60°/s. Para isométrico: ángulo dependiente (referencia en 60–90° rodilla, 0° cadera). Valores ≥0.60 indican balance adecuado.'
+  },
+  ERIR:{
+    alarm_low:0.60, warn_low:0.65, warn_high:0.80, alarm_high:0.90, normal:'0.65 – 0.80',
+    refs:'Cools AM et al. (2014). J Athl Train, 49(3):377–383; Wilk KE et al. (2011). J Orthop Sports Phys Ther, 41(9):621–632; Edouard P et al. (2013). J Sci Med Sport, 16(2):174–179',
+    note:'Ratio ER:IR isométrico en posición neutral. Atletas overhead pueden presentar valores hasta 0.85 sin déficit funcional. <0.60 indica debilidad de rotadores externos relativa a internos.'
+  }
+};
+
+/* ===== MULTI-MUSCLE BUILD REPORT ===== */
+function buildReport(data, patient) {
+  Object.values(activeCharts).forEach(c=>{try{c.destroy()}catch(e){}});
+  activeCharts={};
+
+  const results = data.resultados||[];
+  const musculoGlobal = patient.muscle||data.musculo_global||'Evaluación Isométrica';
+
+  const groups={};
+  results.forEach(r=>{
+    const k=r.musculo_key||'OTRO';
+    if(!groups[k]) groups[k]={label:r.musculo_label||MUSCLE_LABELS[k]||'Músculo',R:null,L:null};
+    if(r.lado==='R') groups[k].R=r.metrics;
+    else if(r.lado==='L') groups[k].L=r.metrics;
+  });
+
+  const bilateral=Object.entries(groups).filter(([k,g])=>g.R&&g.L);
+  const dateStr=new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
+
+  if(!bilateral.length){
+    document.getElementById('reportContent').innerHTML=
+      '<div class="alert warning" style="margin:40px 20px"><div class="alert-icon">⚠️</div><div><div class="alert-title">ANÁLISIS BILATERAL INCOMPLETO</div><div class="alert-sub">No se detectaron ambos lados para ningún músculo. Verificá que las imágenes incluyan capturas de ambos lados.</div></div></div>';
+    showReport(); return;
+  }
+
+  const [pk,pg]=bilateral[0];
+  buildReportCore({
+    r:pg.R, l:pg.L, rightLabel:'Derecho', leftLabel:'Izquierdo',
+    patient:{
+      name:patient.name, sport:patient.sport,
+      muscle:musculoGlobal,
+      injury:patient.injury, prof:patient.prof,
+      profPhoto:patient.profPhoto||(currentUser?getPhoto(currentUser.dni):null),
+      instLogo:null
+    },
+    date:dateStr
+  });
+
+  setTimeout(()=>{
+    const rc=document.getElementById('reportContent');
+    for(let i=1;i<bilateral.length;i++){
+      const [ak,ag]=bilateral[i];
+      rc.innerHTML+=buildCompactBilateral(ag.label,ag.R,ag.L);
+    }
+    if(groups.QUAD&&groups.QUAD.R&&groups.QUAD.L&&groups.HAM&&groups.HAM.R&&groups.HAM.L){
+      rc.innerHTML+=buildHQHtml(groups.QUAD,groups.HAM);
+    }
+    if(groups.EXT_ROT&&groups.EXT_ROT.R&&groups.EXT_ROT.L&&groups.INT_ROT&&groups.INT_ROT.R&&groups.INT_ROT.L){
+      rc.innerHTML+=buildERIRHtml(groups.EXT_ROT,groups.INT_ROT);
+    }
+  },350);
+}
+
+/* ===== COMPACT BILATERAL SECTION ===== */
+function buildCompactBilateral(label,r,l){
+  const fDef=def(r.fmax,l.fmax);
+  const rDef=def(r.rfd50,l.rfd50);
+  const fAlarm=fDef>15, rAlarm=rDef>20;
+  const badge=fAlarm&&rAlarm?'alarm':fAlarm||rAlarm?'warning':'ok';
+  const badgeIcon=fAlarm&&rAlarm?'🚨':fAlarm?'⚠️':rAlarm?'⚡':'✅';
+  const alertTxt=fAlarm&&rAlarm?'DÉFICIT BILATERAL CRÍTICO':fAlarm?'DÉFICIT ESTRUCTURAL':rAlarm?'DÉFICIT NEURAL — RFD':'PERFIL SIMÉTRICO';
+
+  const mkRow=(lb,u,rv,lv,thr,inv)=>{
+    const d2=def(rv,lv);
+    const isAlarm=thr!=null&&d2!=null&&d2>thr;
+    const dom=inv?(rv!=null&&lv!=null&&rv<=lv?'D':'I'):(rv!=null&&lv!=null&&rv>=lv?'D':'I');
+    return '<tr><td class="tc">'+lb+'<br><span style="color:#2a5a2a;font-size:9px">'+u+'</span></td>'
+      +'<td class="tv'+(dom==='D'?' dom':'')+'">'+n(rv)+'</td>'
+      +'<td class="tv'+(dom==='I'?' dom':'')+'">'+n(lv)+'</td>'
+      +'<td class="td'+(isAlarm?' alarm':'')+'">'+( d2!=null?d2+'%':'&#8212;')+'</td></tr>';
+  };
+
+  const rows=[
+    mkRow('Force Max','N',r.fmax,l.fmax,15,false),
+    mkRow('Force Avg','N',r.favg,l.favg,15,false),
+    mkRow('RFD @ 50ms','N/s',r.rfd50,l.rfd50,20,false),
+    mkRow('RFD @ 100ms','N/s',r.rfd100,l.rfd100,20,false),
+    mkRow('RFD @ 250ms','N/s',r.rfd250,l.rfd250,20,false),
+    mkRow('Time to Peak','s',r.tpeak,l.tpeak,null,true),
+  ].join('');
+
+  return '<div class="section-divider">'+label+'</div>'
+    +'<div class="dcard" style="margin:0 0 16px">'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'
+    +'<div style="font-size:20px">'+badgeIcon+'</div>'
+    +'<div><div style="font-family:\'Rajdhani\',sans-serif;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:'+(badge==='ok'?'#00c853':badge==='alarm'?'#ef4444':'#f59e0b')+'">'+alertTxt+'</div>'
+    +'<div style="font-size:11px;color:#4a6a4a">Fuerza: '+(fDef!=null?fDef+'%':'&#8212;')+' · RFD@50ms: '+(rDef!=null?rDef+'%':'&#8212;')+'</div></div></div>'
+    +'<table class="cmp-table"><thead><tr><th>MÉTRICA</th><th>DERECHO</th><th>IZQUIERDO</th><th>DÉFICIT</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+
+/* ===== H:Q RATIO SECTION ===== */
+function buildHQHtml(quad,ham){
+  const hqR=(ham.R&&ham.R.fmax&&quad.R&&quad.R.fmax)?ham.R.fmax/quad.R.fmax:null;
+  const hqL=(ham.L&&ham.L.fmax&&quad.L&&quad.L.fmax)?ham.L.fmax/quad.L.fmax:null;
+
+  function hqStatus(v){
+    if(v==null)return 'nd';
+    if(v<CLINICAL.HQ.alarm)return 'alarm';
+    if(v<CLINICAL.HQ.warn)return 'warn';
+    return 'ok';
+  }
+  function hqBadge(v,s){
+    if(v==null)return '—';
+    return s==='alarm'?'RIESGO ELEVADO':s==='warn'?'DÉFICIT MODERADO':'DENTRO DE RANGO';
+  }
+  function hqPct(v){return v!=null?Math.min(v/0.80*100,100).toFixed(0):0}
+  const stR=hqStatus(hqR),stL=hqStatus(hqL);
+
+  function card(side,ratio,st,erM,irM){
+    return '<div class="ratio-card">'
+      +'<div class="ratio-card-label">Lado '+side+'</div>'
+      +'<div class="ratio-value-row"><div class="ratio-value '+st+'">'+(ratio!=null?ratio.toFixed(2):'—')+'</div><div class="ratio-unit">H:Q</div></div>'
+      +'<div class="ratio-band"><div class="ratio-band-fill '+st+'" style="width:'+hqPct(ratio)+'%"></div></div>'
+      +'<div class="ratio-status-chip '+st+'">'+hqBadge(ratio,st)+'</div>'
+      +'<div class="ratio-normal-range">Normal: '+CLINICAL.HQ.normal+' · Alarma: &lt;'+CLINICAL.HQ.alarm+'</div>'
+      +(ratio!=null?'<div style="margin-top:8px;font-size:10px;color:#4a7a4a">ISQ '+n(erM?erM.fmax:null)+' N / CUAD '+n(irM?irM.fmax:null)+' N</div>':'')
+      +'</div>';
+  }
+
+  return '<div class="section-divider">Ratio Fuerza Flexora / Extensora</div>'
+    +'<div class="ratio-section">'
+    +'<div class="ratio-section-title">⚖️ &nbsp; RATIO ISQUIOTIBIALES : CUÁDRICEPS (H:Q)</div>'
+    +'<div class="ratio-grid">'
+    +card('Derecho',hqR,stR,ham.R,quad.R)
+    +card('Izquierdo',hqL,stL,ham.L,quad.L)
+    +'</div>'
+    +'<div class="ratio-ref-block">'
+    +'<div class="ratio-ref-title">📚 Fundamento científico</div>'
+    +'<div class="ratio-ref-text">'+CLINICAL.HQ.refs+'</div>'
+    +'<div class="ratio-note" style="margin-top:8px">⛑ '+CLINICAL.HQ.note+'</div>'
+    +'</div></div>';
+}
+
+/* ===== ER:IR RATIO SECTION ===== */
+function buildERIRHtml(er,ir){
+  const ratioR=(er.R&&er.R.fmax&&ir.R&&ir.R.fmax)?er.R.fmax/ir.R.fmax:null;
+  const ratioL=(er.L&&er.L.fmax&&ir.L&&ir.L.fmax)?er.L.fmax/ir.L.fmax:null;
+
+  function erirStatus(v){
+    if(v==null)return 'nd';
+    if(v<CLINICAL.ERIR.alarm_low||v>CLINICAL.ERIR.alarm_high)return 'alarm';
+    if(v<CLINICAL.ERIR.warn_low||v>CLINICAL.ERIR.warn_high)return 'warn';
+    return 'ok';
+  }
+  function erirBadge(v,s){
+    if(v==null)return '—';
+    if(s==='alarm')return v<CLINICAL.ERIR.alarm_low?'ER DÉBIL — RIESGO':'IR DÉBIL — RATIO ALTO';
+    if(s==='warn')return v<CLINICAL.ERIR.warn_low?'ER MODERADO':'DOMINIO ER';
+    return 'RATIO ÓPTIMO';
+  }
+  function erirPct(v){return v!=null?Math.min(Math.max(v,0)/1.0*100,100).toFixed(0):0}
+  const stR=erirStatus(ratioR),stL=erirStatus(ratioL);
+
+  function card(side,ratio,st,erM,irM){
+    return '<div class="ratio-card">'
+      +'<div class="ratio-card-label">Lado '+side+'</div>'
+      +'<div class="ratio-value-row"><div class="ratio-value '+st+'">'+(ratio!=null?ratio.toFixed(2):'—')+'</div><div class="ratio-unit">ER:IR</div></div>'
+      +'<div class="ratio-band"><div class="ratio-band-fill '+st+'" style="width:'+erirPct(ratio)+'%"></div></div>'
+      +'<div class="ratio-status-chip '+st+'">'+erirBadge(ratio,st)+'</div>'
+      +'<div class="ratio-normal-range">Normal: '+CLINICAL.ERIR.normal+' · Alarma: &lt;'+CLINICAL.ERIR.alarm_low+' o &gt;'+CLINICAL.ERIR.alarm_high+'</div>'
+      +(ratio!=null?'<div style="margin-top:8px;font-size:10px;color:#4a7a4a">ER '+n(erM?erM.fmax:null)+' N / IR '+n(irM?irM.fmax:null)+' N</div>':'')
+      +'</div>';
+  }
+
+  return '<div class="section-divider">Ratio Rotadores de Hombro</div>'
+    +'<div class="ratio-section">'
+    +'<div class="ratio-section-title">🔄 &nbsp; RATIO ROTACIÓN EXTERNA : INTERNA (ER:IR)</div>'
+    +'<div class="ratio-grid">'
+    +card('Derecho',ratioR,stR,er.R,ir.R)
+    +card('Izquierdo',ratioL,stL,er.L,ir.L)
+    +'</div>'
+    +'<div class="ratio-ref-block">'
+    +'<div class="ratio-ref-title">📚 Fundamento científico</div>'
+    +'<div class="ratio-ref-text">'+CLINICAL.ERIR.refs+'</div>'
+    +'<div class="ratio-note" style="margin-top:8px">⛑ '+CLINICAL.ERIR.note+'</div>'
+    +'</div></div>';
+}
+
 
 /* ===== TABLE ROW ===== */
 function tr2(label,sub,unit,rV,lV,thr,inv){
@@ -1257,7 +1439,7 @@ function updateTopbarUser(){
 
 function logout(){
   currentUser = null; selectedProf = null;
-  profPhoto = null; instLogo = null; imgR = null; imgL = null;
+  profPhoto = null; uploadedImages = []; renderImgCards();
   document.getElementById('pProf').value = '';
   const pp = document.getElementById('prevProf');
   if(pp){ pp.src=''; document.getElementById('photoProf').classList.remove('loaded'); }
