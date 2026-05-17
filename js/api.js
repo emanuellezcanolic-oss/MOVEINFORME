@@ -3,48 +3,25 @@
 /* ===== CLAUDE API CALL — MULTI-IMAGE (BATCHED 2x) ===== */
 
 async function callGroqBatch(apiKey, batchImages, batchIdx, totalImages) {
-  const batchCount = batchImages.length;
-  const prompt = `Sos experto en evaluación isométrica con el software Valkyria Trainer (dinamómetro isométrico).
+  const img = batchImages[0];
+  const prompt = `Sos experto en evaluación isométrica con Valkyria Trainer (dinamómetro isométrico).
 
-Analizá las ${batchCount} imagen(es) de esta tanda (imágenes ${batchIdx+1} a ${batchIdx+batchCount} de ${totalImages} en total).
+Analizá la imagen ${batchIdx+1} de ${totalImages}.
 
-Para CADA imagen identificá:
-1. MÚSCULO — usá exactamente uno de estos keys:
-   QUAD = Cuádriceps / Quadriceps / Mid Thigh Push
-   HAM = Isquiotibiales / Hamstrings
-   EXT_ROT = Rotación Externa / External Rotation / Shoulder External Rotator
-   INT_ROT = Rotación Interna / Internal Rotation / Shoulder Internal Rotator
-   ROW = Remo Isométrico / Isometric Row
-   MTP = Mid Thigh Pull
-   OTRO = cualquier otro músculo
+Identificá:
+1. MÚSCULO — uno de estos keys exactos:
+   QUAD=Cuádriceps, HAM=Isquiotibiales, EXT_ROT=Rot.Externa, INT_ROT=Rot.Interna, ROW=Remo, MTP=Mid Thigh Pull, OTRO=otro
 
-2. LADO — exactamente la letra R (si dice Derecho/Right/Der/D) o L (si dice Izquierdo/Left/Izq/I). Solo una letra.
+2. LADO — solo la letra R (Derecho/Right) o L (Izquierdo/Left)
 
-3. MÉTRICAS — extraé TODOS los valores numéricos visibles en la tabla.
+3. MÉTRICAS — todos los valores numéricos de la tabla
 
-Respondé SOLO con JSON válido, sin texto ni markdown:
-{
-  "resultados": [
-    {
-      "imagen": 1,
-      "musculo_key": "EXT_ROT",
-      "musculo_label": "Rotador Externo Derecho",
-      "lado": "R",
-      "metrics": {
-        "fmax": null, "favg": null, "finit": null, "tpeak": null,
-        "f50": null, "f100": null, "f150": null, "f200": null, "f250": null,
-        "rfd50": null, "rfd100": null, "rfd150": null, "rfd250": null
-      }
-    }
-  ]
-}
-REGLA CRÍTICA: UN objeto por imagen, en el MISMO ORDEN enviado. Nunca inventes valores — null si no es claramente visible.`;
+Respondé SOLO JSON válido sin markdown:
+{"resultados":[{"imagen":${batchIdx+1},"musculo_key":"EXT_ROT","musculo_label":"Rotador Externo Derecho","lado":"R","metrics":{"fmax":null,"favg":null,"finit":null,"tpeak":null,"f50":null,"f100":null,"f150":null,"f200":null,"f250":null,"rfd50":null,"rfd100":null,"rfd150":null,"rfd250":null}}]}
+Nunca inventes valores — null si no es claramente visible.`;
 
   const msgContent = [
-    ...batchImages.map(img => ({
-      type: 'image_url',
-      image_url: { url: `data:${img.mime};base64,${img.base64}` }
-    })),
+    { type: 'image_url', image_url: { url: `data:${img.mime};base64,${img.base64}` } },
     { type: 'text', text: prompt }
   ];
 
@@ -92,24 +69,19 @@ REGLA CRÍTICA: UN objeto por imagen, en el MISMO ORDEN enviado. Nunca inventes 
 }
 
 async function extractWithClaude(apiKey, images, patient) {
-  const BATCH_SIZE = 2;
   const allResults = [];
-  const totalBatches = Math.ceil(images.length / BATCH_SIZE);
 
-  for (let i = 0; i < images.length; i += BATCH_SIZE) {
-    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+  for (let i = 0; i < images.length; i++) {
     const sub = document.getElementById('overlay-sub');
-    if (sub) sub.textContent = `Tanda ${batchNum} de ${totalBatches} — analizando imágenes ${i+1}–${Math.min(i+BATCH_SIZE, images.length)}...`;
+    if (sub) sub.textContent = `Analizando imagen ${i+1} de ${images.length}...`;
 
-    const batch = images.slice(i, i + BATCH_SIZE);
-    const batchData = await callGroqBatch(apiKey, batch, i, images.length);
+    const batchData = await callGroqBatch(apiKey, [images[i]], i, images.length);
     if (batchData.resultados) {
       allResults.push(...batchData.resultados);
     }
 
-    // Pausa entre tandas para evitar rate limit
-    if (i + BATCH_SIZE < images.length) {
-      await new Promise(r => setTimeout(r, 1500));
+    if (i + 1 < images.length) {
+      await new Promise(r => setTimeout(r, 1000));
     }
   }
 

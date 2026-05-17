@@ -10,8 +10,20 @@ function addImage(file){
   if(uploadedImages.length>=6)return;
   const reader=new FileReader();
   reader.onload=ev=>{
-    uploadedImages.push({dataURL:ev.target.result,base64:ev.target.result.split(',')[1],mime:file.type||'image/jpeg',muscleKey:null,muscleLabel:'...',side:null});
-    renderImgCards();
+    const original=ev.target.result;
+    const img=new Image();
+    img.onload=()=>{
+      const MAX=1280;
+      let w=img.width,h=img.height;
+      if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+      const c=document.createElement('canvas');
+      c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      const compressed=c.toDataURL('image/jpeg',0.82);
+      uploadedImages.push({dataURL:compressed,base64:compressed.split(',')[1],mime:'image/jpeg',muscleKey:null,muscleLabel:'...',side:null});
+      renderImgCards();
+    };
+    img.src=original;
   };
   reader.readAsDataURL(file);
 }
