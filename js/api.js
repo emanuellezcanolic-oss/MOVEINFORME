@@ -54,17 +54,28 @@ REGLA CRÍTICA: UN objeto por imagen, en el MISMO ORDEN enviado. Nunca inventes 
     messages: [{ role: 'user', content: msgContent }]
   };
 
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 45000);
+  let res;
+  try {
+    res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: ctrl.signal
+    });
+  } catch(e) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') throw new Error('Tiempo de espera agotado. La API tardó más de 45s. Reintentá.');
+    throw new Error('Error de red: ' + e.message);
+  }
+  clearTimeout(timer);
 
   if (!res.ok) {
     const errBody = await res.json().catch(() => ({}));
     const msg = errBody?.error?.message || `Error API: ${res.status}`;
     if (res.status === 401) throw new Error('API Key inválida.');
-    if (res.status === 429) throw new Error('Límite de requests excedido. Esperá un momento y reintentá.');
+    if (res.status === 429) throw new Error('Límite de requests excedido. Esperá 30 segundos y reintentá.');
     throw new Error(msg);
   }
 
@@ -83,12 +94,22 @@ REGLA CRÍTICA: UN objeto por imagen, en el MISMO ORDEN enviado. Nunca inventes 
 async function extractWithClaude(apiKey, images, patient) {
   const BATCH_SIZE = 2;
   const allResults = [];
+  const totalBatches = Math.ceil(images.length / BATCH_SIZE);
 
   for (let i = 0; i < images.length; i += BATCH_SIZE) {
+    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+    const sub = document.getElementById('overlay-sub');
+    if (sub) sub.textContent = `Tanda ${batchNum} de ${totalBatches} — analizando imágenes ${i+1}–${Math.min(i+BATCH_SIZE, images.length)}...`;
+
     const batch = images.slice(i, i + BATCH_SIZE);
     const batchData = await callGroqBatch(apiKey, batch, i, images.length);
     if (batchData.resultados) {
       allResults.push(...batchData.resultados);
+    }
+
+    // Pausa entre tandas para evitar rate limit
+    if (i + BATCH_SIZE < images.length) {
+      await new Promise(r => setTimeout(r, 1500));
     }
   }
 
