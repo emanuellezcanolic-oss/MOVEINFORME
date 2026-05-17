@@ -630,8 +630,8 @@ async function generate(){
   const err=document.getElementById('errMsg');
   err.className='err-msg';
   if(uploadedImages.length<2){err.textContent='Cargá al menos 2 capturas de Valkyria.';err.className='err-msg show';return}
-  showOverlay('La IA está analizando ${uploadedImages.length} capturas de Valkyria...
-Esto tarda 10-20 segundos.');
+  showOverlay(`La IA está analizando ${uploadedImages.length} capturas de Valkyria...
+Esto tarda 10-20 segundos.`);
   document.getElementById('genBtn').disabled=true;
   try{
     const patient={
