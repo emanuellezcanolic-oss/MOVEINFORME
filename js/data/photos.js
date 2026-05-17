@@ -38,11 +38,6 @@ let uploadedImages = [];
 let profPhoto = null;
 let activeCharts = {};
 
-document.getElementById('topDate').textContent =
-  new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
-document.getElementById('topbarLogo').src = MOVE_LOGO_SRC;
-document.getElementById('loginLogo').src = MOVE_LOGO_SRC;
-
 /* ===== PHOTO UPLOADS ===== */
 function setPhoto(e, type){
   const file = e.target.files[0]; if(!file) return;

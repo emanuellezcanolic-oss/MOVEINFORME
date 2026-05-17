@@ -1,11 +1,6 @@
 // MOVE Informe — Multi-Image Upload & Generate
 
 /* ===== MULTI-IMAGE UPLOAD ===== */
-const MUSCLE_LABELS = {
-  QUAD:'Cuádriceps', HAM:'Isquiotibiales', EXT_ROT:'Rot. Externa',
-  INT_ROT:'Rot. Interna', ROW:'Remo Isométrico', MTP:'Mid Thigh Push', OTRO:'Otro'
-};
-
 function multiOver(e){e.preventDefault();document.getElementById('multiDrop').classList.add('over')}
 function multiLeave(e){document.getElementById('multiDrop').classList.remove('over')}
 function multiDropFn(e){e.preventDefault();multiLeave(e);Array.from(e.dataTransfer.files).forEach(addImage)}
