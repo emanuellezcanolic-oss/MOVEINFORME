@@ -1,5 +1,6 @@
 // MOVE Informe — Authentication & Admin
 
+/* ===== PHOTO UPLOADS ===== */
 function setPhoto(e, type){
   const file = e.target.files[0]; if(!file) return;
   const reader = new FileReader();
@@ -12,7 +13,6 @@ function setPhoto(e, type){
   };
   reader.readAsDataURL(file);
 }
-
 
 /* ===== LOGIN SYSTEM ===== */
 function initials(name){return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
@@ -143,5 +143,7 @@ function uploadProfPhoto(e, dni){
   };
   reader.readAsDataURL(file);
 }
+
+initLogin();
 
 document.getElementById('dniInput').addEventListener('keydown', e=>{ if(e.key==='Enter') tryLogin(); });

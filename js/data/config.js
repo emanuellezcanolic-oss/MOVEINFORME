@@ -1,5 +1,4 @@
 // MOVE Club — Configuration
-// Edit this file to update team, credentials, and clinical thresholds
 
 GROQ_KEY = ['gsk_JkHBSch','NpW16hcBa6Vgt','WGdyb3FYAcP33hzaz51LkH56Y1DHSiDQ'].join('');
 
@@ -23,6 +22,7 @@ const MUSCLE_LABELS = {
   INT_ROT:'Rot. Interna', ROW:'Remo Isométrico', MTP:'Mid Thigh Push', OTRO:'Otro'
 };
 
+/* ===== CLINICAL THRESHOLDS ===== */
 const CLINICAL = {
   HQ:{
     alarm:0.50, warn:0.60, normal:'≥0.60',

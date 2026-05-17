@@ -1,5 +1,4 @@
 // Staff photos (base64 JPEG, 120x120px)
-// Admin can override via localStorage (upload from admin panel)
 
 const PROF_PHOTOS = {
   '42294564': '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5Ojf/2wBDAQoKCg0MDRoPDxo3JR8lNzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzf/wAARCAB4AHgDASIAAhEBAxEB/8QAHAAAAQQDAQAAAAAAAAAAAAAAAgADBQcBBAYI/8QAQxAAAQMDAwEFBAUJBQkAAAAAAQACAwQFERIhMQYHE0FRYSIycYEUQpGhsRUXI1JVcpTB0TNTYpLSCBYkNDVzgrLC/8QAGQEBAQEBAQEAAAAAAAAAAAAAAAECBAMF/8QAHhEAAgMAAwADAAAAAAAAAAAAAAECAxESITETMlH/2gAMAwEAAhEDEQA/ALDsXUVh6ttlPNOaN08ZbI+lqC3VDIPEB33ELh+2fqqjrKeCx22oZOWy99UvjdqaCAdLcjk5JJ8sBVy6zXQ82utPxpX/ANEH5Guvha67+Ff/AEQFl0nW3T9D2ZS2u31Mja+OjMAgmYWufI/ZzgeCMuceeFUJ2GAr8tFKYexx7Kin7uZtsn1Nkj0uB9vnIyqDPCAApRf28f77fxCRSjIbKxxOAHAk/NAexBwoGC21tJZaqjoailjuEzjIXguwwuPtO3ySfeIztnHgpuGWOaJksT2vje0Oa5pyHA+IKZnpGSyiVj3RSjlzMDPhv57cIDl7N0zdLXc21MJoI42yBuhjn7QEuyz3d/quGcnXrOfaIU3QUFRDe66sE8LqScDREzOWvGASfDwW0YKqSJjJakA76yxvvbjH3ZHzWzDG2GNsbOGjGSckoCnf9oD/AJuyf9ub8WKo3NDgWuGQeVbPb9LG64WeJr2mRkUpc0HdoJbjPxwfsVTr0XhyWfZkRURmKQtPyPmEyVK1kPex5HvN3CiisNYdFcuSAKSRSUNnq385nSX7Wd/Dy/6Uvzm9JftZ38PL/pVYdR9mN+tOuWjYLlTDfVTj9IB6sO/2ZXDva5jyx7S1zThzXDBB9QgPSd9uNLdug7pX0Eve009vmdG/SRqGlw4O/gvMp4VoW3tAtFJ2eHp6WGsNZ9Clg1Njbo1O1Y31ZxuPBVeUABCwWu8Gn7E7HIWH0T+cgEHZaS08pzcX4aYE4ADTIAOAHEImCo1tOuQAHnWVsPcGjLjgIGTB5IawuH6x4UeR9JGU5+Ic72T+8f8A5isGWT+8f/mKcLWFpc3BHG2Vqd9pdpkGnfYqqaMOmSHHEk5JJPmShWSsLZ5GCoyvh0P1tHsu59CpMpuVgkYWO4KjWmoS4vSEKSKZjo3ljuQkvM7D1H2bdZ1XVcdZHXUsMU1IGEyQk4fqz9U8cea37naelesHzwTtpamrgc6OR0L9M8TgcEEjf7chct2J2q4UDLnU1tFPTw1DYhC6VmnXguzgHfxCm6bs4s8d7qr1XzT1NRLUPnaNZiZFkk/VOTj1OPRAcH1f2U1Vppai4WmtbU0kDHSSRz+xIxoGTgjZ23wVaFX317190/T2e4WqnqvplXUU74Q2m9prC4Yy53G3pkqhCgAKKOXQcH3fwQlAUI0msYVTJqIaBwVux26tNLrigcIne87C2bTbPypcII2PDS5u+3AAG6uix2umpqEQuazRpw5z9yV4Tm+R711rj0UjURfRoP0jSduAoeaYHO23mrcvvSnc1bpaFsVRTy51Qv20/Arhb10pPD3k0UTomt5jcc4+BWuYdbRAU9QGsIeTpHBwiNZEP1j8lpbNfp3BGxKAr1jJ5hzzqi3pumuj8GuKbdXt8Iz9q0yhKvJmfiiHVTicg6NJHjnlJMlJQ2kksR6S6i7XbVR6orJEbhNx3rzoiH/077viqu6i6xvfUJLbjcD3BO1PEdEQ/wDEc/PKv0DpVxAAsZJOAB3O62Kq32CkYH1dHa4GuOA6WKJgJ8twhTy0XN4Dh9qEr0n1NbrM/pG7VNHRW9w+hTOjlhhjO4adwQF5sPCAAoCjKAoDtez6hdNLUS7h7YAGH947/cApuJ0s1dpFDV0rmuDWvdUe/wDBv4ouzuaCa0wubgTRkwy49N25+RXX1v0anY+QkGQN1OeQPYHmSuWUnyZ2wrTiuyCvsksr6KihlkaHxkyuY7DjjyPguSrZHPldTQ0VZTPa4tDpZu8D8ePwK6G9XS2suVC+GsjnJABaDvg+Sk7r9FgpzNCI9Jb72ndRSxdllBN9Mpm5UjWXaVmnDc6iPiP6qNqIjE/B4PBXRXNzZKuebG7naW/zUdNGJWFrvkfJdda2J862fGzCHKEpyRhY4tcMEJsobAKSRSQHXW9rfyhSeyP7ePw/xBXF274Ngt2QD/xx/wDRy4NvZ31hG9r2WiQOaQ5pE0exG4+spK8dOdpF7hZDdaepqoo362NkmhwHYxnYjwKA7Lp3bsTfj9m1P4vVDHhWsP8Af2zdFz2iWwUzbbFSyskmc9pe1hyXHZ/IyfBVSUABQFGUBQE70RcfoF+ha9+mKf8ARu32z9U/bt81b8k0jWaqVkeXD2jJn+SoJjXSSNjiBdK44a1u7ifQK6bbcJqKkpjcWO7t0TSX4yWuxuD81zXLtM6qJdYRl1IdUd62OgdNn3mwku+3CYvtWI7JGHkB7gSQOAFIXzqq2iB3dOa93Aa1qry63WouRJc0iJvDW+SiWtGrJ9PCOe4ucSfEkoFnIIBByFhdyWHxm23rNarg71mW++OPX0UW5ThWhX0/MrB+8P5qSR61TzpkeUkiksHQelIe1+0TTxxNtleDI9rASY9snHn6rqOseqaXpOigqqynnnbNN3QEOnIOCc7n0XnGhcG11M5xAaJmEk8AagrV7abtbbhZKCOguFLUvbWFzmwzNeQNDtzgoDrq+7w3/s4uF0p4pIoqi3zlrJMahgOG+NvBebTwr66dB/Mo/Y/9NqfD1eqHjbqcM8BABpzuTgLIawEEtJ+KdduT6JYVwzp3XZVa6SVtfUNjjM7C1gP1gDkk/A7D5KwhQNEDoZGBzD4FUbarnWWatbWW6Yxyt2PiHDyI8QrBt3arTGENulslbJj36Z4c0/J2CPtK5rapOXJHTVbFR4sdu/R9PUSOdHGWjzDlBXS0QWa3vqZsaI9mA8vd4AKXuHadQiIigtk8jzwZ3BjR8cZK4C83ivvlV9Ir5AQ3aOJgwxg9ArCuT98E7IpdEOxrwc6iMpxzpNJ0gah58J4hYHAJ8sFdJyNJ+kbLU1DXFriGn4Jh9RMeZHKSq4BI3AwHeBUS8FpIIwRyFHppRj+AFJIpKGjpygKMoHIBwVdS2HuW1M4ixjuxK4Nx5YzhNM2dj/DlYKw12ZB5YIVRGFHvFq/WJKJBEc00aPlUyCeVjHmieEuQgB0hEBkpD1RAbqgDG6xjII8in6eCWpqI4KeN0k0rwxjGjJc4nAAWaykqaIROqoJIRO3vIy9uNTcluR8wgNN5yAD4AhR1wj0vD8c7H4rfBzJvwgni75rmHk8H1UZUQxSWZGOY4tcMEJLJo63WQ6M9+BiMjOk+zsfZ4+/1QMeQYMThmlxI9knu9xvxv5+PCSSA1jytdjskjyKSSqIx6HIhaD45KeHCSSpkRGyEbJJIBOHilnZJJUEt05VU1FNV1k1T3FRFTPFJ7DiTK72cjHBDS4gnxwtyuutHX2qrpK2omkw3vaQ92XGOYEDGSdmub73qAeUklM16YcNkpb4cpCdRJ8RsUY2ekkh6GtWUwmbts8cH+SSSSuJng5uLxH//2Q==',
@@ -17,37 +16,9 @@ const PROF_PHOTOS = {
 };
 
 function getPhoto(dni){ return localStorage.getItem('prof_photo_'+dni) || (PROF_PHOTOS[dni] ? 'data:image/jpeg;base64,'+PROF_PHOTOS[dni] : null); }const PROFESSIONALS = [
-  {name:'Emanuel Lezcano',  dni:'34485371', prof:'Lic. Lezcano, E.',     admin:true},
-  {name:'Lucas Siebenlist', dni:'31022661', prof:'Lic. Siebenlist, L.'},
-  {name:'Giuliano Palomeque',dni:'43793110',prof:'Lic. Palomeque, G.'},
-  {name:'Carla Agostini',   dni:'30519521', prof:'Lic. Agostini, C.'},
-  {name:'Sol Carballo',     dni:'41033273', prof:'Lic. Carballo, S.'},
-  {name:'Agustina Ostarriecht',dni:'42294564',prof:'Lic. Ostarriecht, A.'},
-  {name:'Camila Romeo',     dni:'38673361', prof:'Lic. Romeo, C.'},
-  {name:'Fernando Sebrie',  dni:'38288805', prof:'Lic. Sebrie, F.'},
-  {name:'Javier Larramendy',dni:'39868905', prof:'Lic. Larramendy, J.'},
-
-  {name:'Enzo Legammari',   dni:'42294960', prof:'Lic. Legammari, E.'},
-  {name:'Belen Juarez',     dni:'44487328', prof:'Lic. Juarez, B.'},
-];
 
 let currentUser = null;
 let selectedProf = null;
-
 let uploadedImages = [];
 let profPhoto = null;
 let activeCharts = {};
-
-/* ===== PHOTO UPLOADS ===== */
-function setPhoto(e, type){
-  const file = e.target.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    if(type === 'prof'){
-      profPhoto = ev.target.result;
-      document.getElementById('prevProf').src = ev.target.result;
-      document.getElementById('photoProf').classList.add('loaded');
-    }
-  };
-  reader.readAsDataURL(file);
-}
