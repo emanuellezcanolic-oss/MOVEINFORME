@@ -259,14 +259,34 @@ function buildReport(data, patient) {
   const results = data.resultados||[];
   const musculoGlobal = patient.muscle||data.musculo_global||'Evaluación Isométrica';
 
+  function normLado(s){
+    if(!s) return null;
+    s=s.trim().toUpperCase();
+    if(s==='R'||s==='D'||s.startsWith('DER')||s.startsWith('RIGHT')) return 'R';
+    if(s==='L'||s==='I'||s.startsWith('IZQ')||s.startsWith('LEFT')) return 'L';
+    return null;
+  }
+  function normKey(k){
+    if(!k) return 'OTRO';
+    k=k.trim().toUpperCase();
+    const map={QUADRICEPS:'QUAD',CUADRICEPS:'QUAD',QUAD:'QUAD',
+               HAM:'HAM',HAMSTRING:'HAM',ISQUIO:'HAM',
+               EXT_ROT:'EXT_ROT',EXTERNAL:'EXT_ROT',
+               INT_ROT:'INT_ROT',INTERNAL:'INT_ROT',
+               ROW:'ROW',MTP:'MTP'};
+    return map[k]||k;
+  }
+
   const groups={};
   results.forEach(r=>{
-    const k=r.musculo_key||'OTRO';
+    const k=normKey(r.musculo_key);
+    const lado=normLado(r.lado);
     if(!groups[k]) groups[k]={label:r.musculo_label||MUSCLE_LABELS[k]||'Músculo',R:null,L:null};
-    if(r.lado==='R') groups[k].R=r.metrics;
-    else if(r.lado==='L') groups[k].L=r.metrics;
+    if(lado==='R') groups[k].R=r.metrics;
+    else if(lado==='L') groups[k].L=r.metrics;
   });
 
+  console.log('[buildReport] groups:', JSON.stringify(Object.fromEntries(Object.entries(groups).map(([k,g])=>([k,{R:!!g.R,L:!!g.L}])))));
   const bilateral=Object.entries(groups).filter(([k,g])=>g.R&&g.L);
   const dateStr=new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
 

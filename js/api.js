@@ -18,7 +18,7 @@ Para CADA imagen identificá:
    MTP = Mid Thigh Pull
    OTRO = cualquier otro músculo
 
-2. LADO — R (Derecho/Right) o L (Izquierdo/Left). Leé el título de la imagen.
+2. LADO — exactamente la letra R (si dice Derecho/Right/Der/D) o L (si dice Izquierdo/Left/Izq/I). Solo una letra.
 
 3. MÉTRICAS — extraé TODOS los valores numéricos visibles en la tabla.
 
@@ -70,6 +70,7 @@ REGLA CRÍTICA: UN objeto por imagen, en el MISMO ORDEN enviado. Nunca inventes 
 
   const result = await res.json();
   const text = result.choices[0].message.content.trim();
+  console.log(`[Batch ${batchIdx}] API raw:`, text.slice(0, 300));
   const cleaned = text.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '').trim();
   try { return JSON.parse(cleaned); }
   catch(e) {
