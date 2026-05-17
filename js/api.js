@@ -28,6 +28,7 @@ Nunca inventes valores — null si no es claramente visible.`;
   const body = {
     model: 'meta-llama/llama-4-scout-17b-16e-instruct',
     max_tokens: 1024,
+    response_format: { type: 'json_object' },
     messages: [{ role: 'user', content: msgContent }]
   };
 
@@ -58,14 +59,22 @@ Nunca inventes valores — null si no es claramente visible.`;
 
   const result = await res.json();
   const text = result.choices[0].message.content.trim();
-  console.log(`[Batch ${batchIdx}] API raw:`, text.slice(0, 300));
-  const cleaned = text.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '').trim();
-  try { return JSON.parse(cleaned); }
-  catch(e) {
-    const m = cleaned.match(/\{[\s\S]*\}/);
-    if (m) try { return JSON.parse(m[0]); } catch(e2) {}
-    throw new Error('La IA devolvió un formato inesperado en la tanda. Reintentá.');
+  console.log(`[Img ${batchIdx+1}] API raw:`, text.slice(0, 300));
+
+  // Try parsing — multiple strategies
+  const strategies = [
+    t => JSON.parse(t),
+    t => JSON.parse(t.replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'')),
+    t => { const m = t.match(/\{[\s\S]*\}/); return m ? JSON.parse(m[0]) : null; },
+    t => { const m = t.match(/\[[\s\S]*\]/); return m ? { resultados: JSON.parse(m[0]) } : null; }
+  ];
+  for (const fn of strategies) {
+    try { const r = fn(text); if (r) return r; } catch(e) {}
   }
+
+  // All parsing failed — return null result for this image so others still process
+  console.warn(`[Img ${batchIdx+1}] JSON parse failed, skipping. Raw:`, text.slice(0,500));
+  return { resultados: [] };
 }
 
 async function extractWithClaude(apiKey, images, patient) {
