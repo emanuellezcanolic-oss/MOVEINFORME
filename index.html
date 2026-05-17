@@ -287,13 +287,17 @@ td.dom{color:#fff;font-weight:700}
   canvas{max-width:100%!important}
 }
 
+@media(max-width:900px){.prof-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:800px){
   .row1,.drop-row,.quick-fields{grid-template-columns:1fr}
   .row2{grid-template-columns:1fr 1fr}
   .rpt-hdr{grid-template-columns:1fr;gap:14px}
+  .prof-grid{grid-template-columns:repeat(2,1fr)}
+  .admin-panel{width:100%}
 }
 @media(max-width:500px){
   .row2,.proto-row{grid-template-columns:1fr}
+  .prof-grid{grid-template-columns:repeat(2,1fr)}
 }
 
 .fade-in{animation:fi .3s ease}
@@ -301,6 +305,70 @@ td.dom{color:#fff;font-weight:700}
 
 /* SVG logo shortcuts */
 .logo-svg{display:block}
+
+/* ===== LOGIN VIEW ===== */
+.login-wrap{min-height:calc(100vh - 54px);display:flex;flex-direction:column;align-items:center;padding:40px 20px;background:radial-gradient(ellipse at top,#001a0080 0%,transparent 60%)}
+.login-hero{text-align:center;margin-bottom:40px}
+.login-logo{margin-bottom:20px}
+.login-title{font-family:'Rajdhani',sans-serif;font-size:30px;font-weight:700;letter-spacing:4px;color:#fff;text-transform:uppercase}
+.login-title span{color:#00ff88}
+.login-sub{font-size:10px;color:#2a6a2a;font-family:'Rajdhani',sans-serif;letter-spacing:2.5px;text-transform:uppercase;margin-top:8px}
+.prof-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;width:100%;max-width:860px;margin-bottom:40px}
+.prof-card{background:linear-gradient(180deg,#0d170d,#0a0f0a);border:1px solid #1a3a1a;border-radius:12px;padding:20px 14px;text-align:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.prof-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at top,#00c85508,transparent 70%);pointer-events:none}
+.prof-card:hover{border-color:#00c853;transform:translateY(-3px);box-shadow:0 10px 28px #00c85318}
+.prof-card:active{transform:translateY(0)}
+.prof-avatar{width:66px;height:66px;border-radius:50%;margin:0 auto 11px;background:#0a120a;border:2px solid #1a3a1a;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;color:#2a6a2a;transition:border-color .2s}
+.prof-avatar img{width:100%;height:100%;object-fit:cover}
+.prof-card:hover .prof-avatar{border-color:#00c853}
+.prof-name{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:.8px;color:#fff;text-transform:uppercase;line-height:1.3}
+.prof-role{font-family:'Rajdhani',sans-serif;font-size:8px;color:#1e5a1e;letter-spacing:1px;margin-top:3px;text-transform:uppercase}
+.prof-card.admin-card::after{content:'ADMIN';position:absolute;top:7px;right:7px;font-family:'Rajdhani',sans-serif;font-size:7px;letter-spacing:1.5px;font-weight:700;color:#00c853;background:#00c85315;border:1px solid #00c85330;border-radius:3px;padding:2px 5px}
+
+/* DNI Modal */
+.dni-modal{position:fixed;inset:0;background:#000000cc;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(8px)}
+.dni-modal.open{display:flex}
+.dni-box{background:#0d170d;border:1px solid #00c85340;border-radius:16px;padding:32px;width:100%;max-width:340px;text-align:center;animation:popIn .2s cubic-bezier(.4,0,.2,1)}
+@keyframes popIn{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}
+.dni-avatar{width:78px;height:78px;border-radius:50%;margin:0 auto 14px;background:#0a120a;border:2px solid #00c85340;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:700;color:#2a6a2a}
+.dni-avatar img{width:100%;height:100%;object-fit:cover}
+.dni-prof-name{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;color:#fff;margin-bottom:4px}
+.dni-label{font-size:10px;color:#2a6a2a;font-family:'Rajdhani',sans-serif;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px}
+.dni-input{width:100%;background:#0a0a0a;border:1px solid #1e3a1e;border-radius:8px;padding:13px;color:#fff;font-size:20px;font-family:'Rajdhani',sans-serif;letter-spacing:5px;text-align:center;outline:none;transition:border-color .2s;margin-bottom:8px}
+.dni-input:focus{border-color:#00c853;box-shadow:0 0 0 2px #00c85318}
+.dni-input.err{border-color:#ef4444;animation:shake .3s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.dni-err{font-size:11px;color:#ef4444;font-family:'Rajdhani',sans-serif;height:16px;margin-bottom:12px}
+.dni-btn{width:100%;padding:13px;background:linear-gradient(135deg,#00c853,#00e676);color:#000;border:none;border-radius:8px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.dni-btn:hover{box-shadow:0 0 20px #00c85340}
+.dni-cancel{margin-top:12px;font-size:10px;color:#2a5a2a;cursor:pointer;font-family:'Rajdhani',sans-serif;letter-spacing:1px;text-transform:uppercase;border:none;background:none;width:100%}
+.dni-cancel:hover{color:#00c853}
+
+/* Admin sidebar panel */
+.admin-panel{position:fixed;top:0;right:0;bottom:0;width:340px;background:#0a0f0af2;border-left:1px solid #1a3a1a;z-index:8888;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;backdrop-filter:blur(8px)}
+.admin-panel.open{transform:translateX(0)}
+.admin-ph{padding:18px 20px;border-bottom:1px solid #1a3a1a;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#0a0f0a;z-index:1}
+.admin-ph-title{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#00ff88}
+.admin-close{background:none;border:none;color:#2a6a2a;cursor:pointer;font-size:18px;padding:4px;line-height:1}
+.admin-close:hover{color:#00c853}
+.admin-list{padding:14px;display:flex;flex-direction:column;gap:8px}
+.admin-item{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;background:#0d170d;border:1px solid #1a3a1a;border-radius:8px;padding:11px}
+.admin-avatar{width:40px;height:40px;border-radius:50%;background:#0a120a;border:1px solid #1a3a1a;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:#2a6a2a}
+.admin-avatar img{width:100%;height:100%;object-fit:cover}
+.admin-iname{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;color:#ccc;letter-spacing:.5px}
+.admin-idni{font-family:'Rajdhani',sans-serif;font-size:8px;color:#2a6a2a;letter-spacing:1px;margin-top:2px}
+.admin-upload-btn{font-size:10px;padding:5px 9px;background:#0a120a;border:1px solid #1a3a1a;border-radius:5px;color:#2a7a2a;font-family:'Rajdhani',sans-serif;letter-spacing:1px;cursor:pointer;font-weight:700;position:relative;overflow:hidden;text-transform:uppercase;white-space:nowrap;display:block}
+.admin-upload-btn:hover{border-color:#00c853;color:#00c853}
+.admin-upload-btn input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+
+/* Topbar user chip */
+.user-chip{display:flex;align-items:center;gap:7px;cursor:pointer;padding:4px 10px;border-radius:20px;border:1px solid #1a3a1a;transition:border-color .2s;background:#0d170d}
+.user-chip:hover{border-color:#00c853}
+.uc-avatar{width:24px;height:24px;border-radius:50%;background:#0a120a;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:700;color:#2a6a2a;flex-shrink:0}
+.uc-avatar img{width:100%;height:100%;object-fit:cover}
+.uc-name{font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:700;letter-spacing:1px;color:#3a8a3a;text-transform:uppercase}
+.logout-btn{background:none;border:none;color:#1a3a1a;cursor:pointer;font-size:12px;padding:3px 5px;font-family:'Rajdhani',sans-serif;letter-spacing:1px;transition:color .2s}
+.logout-btn:hover{color:#ef4444}
 
 /* ===== PHOTO UPLOAD ZONES ===== */
 .prof-section{margin-bottom:20px;background:#0a0f0a;border:1px solid #1a3a1a;border-radius:10px;padding:16px}
@@ -330,15 +398,14 @@ td.dom{color:#fff;font-weight:700}
 <!-- TOPBAR -->
 <header class="topbar">
   <div class="tlogo">
-    <svg class="logo-svg" width="28" height="24" viewBox="0 0 90 76" fill="none" style="color:#00c853">
-      <polygon points="45,3 87,72 3,72" stroke="currentColor" stroke-width="4.5" stroke-linejoin="round" fill="none"/>
-      <polygon points="45,21 71,72 19,72" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round" fill="none"/>
-      <polygon points="45,40 60,72 30,72" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
-    </svg>
+    <img id="topbarLogo" style="height:30px;width:auto" alt="The Move Club">
     <div class="tlogo-name">MOVE<span>INFORME</span></div>
   </div>
   <div class="topbar-r">The Move Club · Est. 2021</div>
-  <div style="font-size:10px;color:#1e3a1e;font-family:'Rajdhani',sans-serif;letter-spacing:1px" id="topDate"></div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="font-size:10px;color:#1e3a1e;font-family:'Rajdhani',sans-serif;letter-spacing:1px" id="topDate"></div>
+    <div id="topUserArea" style="display:flex;align-items:center;gap:8px"></div>
+  </div>
 </header>
 
 <!-- LOADING -->
@@ -348,8 +415,42 @@ td.dom{color:#fff;font-weight:700}
   <div class="overlay-sub" id="overlay-sub">Claude está leyendo las imágenes de Valkyria y extrayendo los datos de fuerza y RFD...</div>
 </div>
 
+<!-- ===== LOGIN VIEW ===== -->
+<div class="view active" id="loginView">
+<div class="login-wrap">
+  <div class="login-hero">
+    <div class="login-logo"><img id="loginLogo" style="height:70px;width:auto" alt="The Move Club"></div>
+    <div class="login-title">THE MOVE <span>CLUB</span></div>
+    <div class="login-sub">Sistema de Evaluación Isométrica · Seleccioná tu perfil</div>
+  </div>
+  <div class="prof-grid" id="profGrid"></div>
+</div>
+</div>
+
+<!-- DNI Modal -->
+<div class="dni-modal" id="dniModal">
+  <div class="dni-box">
+    <div class="dni-avatar" id="dniAvatar"></div>
+    <div class="dni-prof-name" id="dniName"></div>
+    <div class="dni-label">Ingresá tu DNI para acceder</div>
+    <input class="dni-input" type="password" inputmode="numeric" id="dniInput" placeholder="· · · · · · · ·" maxlength="8" autocomplete="off">
+    <div class="dni-err" id="dniErr"></div>
+    <button class="dni-btn" onclick="tryLogin()">Ingresar</button>
+    <button class="dni-cancel" onclick="closeDniModal()">Cancelar</button>
+  </div>
+</div>
+
+<!-- Admin Sidebar Panel -->
+<div class="admin-panel" id="adminPanel">
+  <div class="admin-ph">
+    <div class="admin-ph-title">⚙ Gestionar Equipo MOVE</div>
+    <button class="admin-close" onclick="closeAdminPanel()">✕</button>
+  </div>
+  <div class="admin-list" id="adminList"></div>
+</div>
+
 <!-- ===== UPLOAD VIEW ===== -->
-<div class="view active" id="uploadView">
+<div class="view" id="uploadView">
 <div class="upload-wrap">
 
   <div class="upload-hero">
@@ -445,12 +546,35 @@ td.dom{color:#fff;font-weight:700}
 
 const GROQ_KEY = ['gsk_JkHBSch','NpW16hcBa6Vgt','WGdyb3FYAcP33hzaz51LkH56Y1DHSiDQ'].join('');
 
+const ISOTIPO_B64 = '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';
+const MOVE_LOGO_SRC = `data:image/png;base64,${ISOTIPO_B64}`;
+
+const PROFESSIONALS = [
+  {name:'Emanuel Lezcano',  dni:'34485371', prof:'Lic. Lezcano, E.',     admin:true},
+  {name:'Lucas Siebenlist', dni:'31022661', prof:'Lic. Siebenlist, L.'},
+  {name:'Giuliano Palomeque',dni:'43793110',prof:'Lic. Palomeque, G.'},
+  {name:'Carla Agostini',   dni:'30519521', prof:'Lic. Agostini, C.'},
+  {name:'Sol Carballo',     dni:'41033273', prof:'Lic. Carballo, S.'},
+  {name:'Agustina Ostarriecht',dni:'42294564',prof:'Lic. Ostarriecht, A.'},
+  {name:'Camila Romeo',     dni:'38673361', prof:'Lic. Romeo, C.'},
+  {name:'Fernando Sebrie',  dni:'38288805', prof:'Lic. Sebrie, F.'},
+  {name:'Javier Larramendy',dni:'39868905', prof:'Lic. Larramendy, J.'},
+  {name:'Daniel El Khazen', dni:'33333333', prof:'Lic. El Khazen, D.'},
+  {name:'Enzo Legammari',   dni:'42294960', prof:'Lic. Legammari, E.'},
+  {name:'Belen Juarez',     dni:'44487328', prof:'Lic. Juarez, B.'},
+];
+
+let currentUser = null;
+let selectedProf = null;
+
 let imgR = null, imgL = null;
 let profPhoto = null, instLogo = null;
 let activeCharts = {};
 
 document.getElementById('topDate').textContent =
   new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
+document.getElementById('topbarLogo').src = MOVE_LOGO_SRC;
+document.getElementById('loginLogo').src = MOVE_LOGO_SRC;
 
 /* ===== PHOTO UPLOADS ===== */
 function setPhoto(e, type){
@@ -656,11 +780,7 @@ function buildReport(d){
     ? `<div class="inj-tag has">🩹 ${patient.injury}</div>`
     : `<div class="inj-tag none">✓ Sin lesiones activas reportadas</div>`;
 
-  const logo = `<svg width="38" height="34" viewBox="0 0 90 76" fill="none" style="color:#00ff88">
-    <polygon points="45,3 87,72 3,72" stroke="currentColor" stroke-width="4.5" stroke-linejoin="round" fill="none"/>
-    <polygon points="45,21 71,72 19,72" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round" fill="none"/>
-    <polygon points="45,40 60,72 30,72" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
-  </svg>`;
+  const logo = `<img src="${MOVE_LOGO_SRC}" style="height:44px;width:auto" alt="The Move Club">`;
 
   const badge = `<svg width="68" height="68" viewBox="0 0 140 140" fill="none">
     <defs><path id="ct" d="M 70,70 m -52,0 a 52,52 0 1,1 104,0"/></defs>
@@ -861,11 +981,7 @@ function buildReport(d){
     <div style="display:flex;align-items:center;gap:12px">
       ${patient.instLogo
         ? `<img src="${patient.instLogo}" style="max-height:36px;max-width:80px;object-fit:contain;border-radius:3px" alt="Logo">`
-        : `<svg width="28" height="24" viewBox="0 0 90 76" fill="none" style="color:#2a6a2a">
-            <polygon points="45,3 87,72 3,72" stroke="currentColor" stroke-width="4.5" stroke-linejoin="round" fill="none"/>
-            <polygon points="45,21 71,72 19,72" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round" fill="none"/>
-            <polygon points="45,40 60,72 30,72" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
-           </svg>`}
+        : `<img src="${MOVE_LOGO_SRC}" style="height:30px;width:auto;opacity:.6" alt="The Move Club">`}
       <div class="rf-l"><strong>${patient.prof}</strong>${d.date}</div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -1053,6 +1169,139 @@ function hideOverlay(){document.getElementById('overlay').classList.remove('acti
 /* ===== VIEWS ===== */
 function showReport(){document.getElementById('uploadView').classList.remove('active');document.getElementById('reportView').classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
 function goBack(){document.getElementById('reportView').classList.remove('active');document.getElementById('uploadView').classList.add('active');document.getElementById('genBtn').disabled=false;window.scrollTo({top:0,behavior:'smooth'})}
+
+/* ===== LOGIN SYSTEM ===== */
+function initials(name){return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+
+function initLogin(){
+  const grid = document.getElementById('profGrid');
+  grid.innerHTML = PROFESSIONALS.map(p => {
+    const photo = localStorage.getItem(`prof_photo_${p.dni}`);
+    const av = photo ? `<img src="${photo}" alt="">` : initials(p.name);
+    return `<div class="prof-card ${p.admin?'admin-card':''}" onclick="selectProf('${p.dni}')">
+      <div class="prof-avatar">${av}</div>
+      <div class="prof-name">${p.name}</div>
+      <div class="prof-role">The Move Club</div>
+    </div>`;
+  }).join('');
+}
+
+function selectProf(dni){
+  const p = PROFESSIONALS.find(x=>x.dni===dni);
+  if(!p) return;
+  selectedProf = p;
+  const photo = localStorage.getItem(`prof_photo_${p.dni}`);
+  const av = photo ? `<img src="${photo}" alt="">` : initials(p.name);
+  document.getElementById('dniAvatar').innerHTML = av;
+  document.getElementById('dniName').textContent = p.name;
+  document.getElementById('dniInput').value = '';
+  document.getElementById('dniErr').textContent = '';
+  document.getElementById('dniModal').classList.add('open');
+  setTimeout(()=>document.getElementById('dniInput').focus(), 120);
+}
+
+function closeDniModal(){
+  document.getElementById('dniModal').classList.remove('open');
+  selectedProf = null;
+}
+
+function tryLogin(){
+  if(!selectedProf) return;
+  const dni = document.getElementById('dniInput').value.trim();
+  if(dni === selectedProf.dni){
+    currentUser = selectedProf;
+    closeDniModal();
+    applyLogin();
+  } else {
+    const inp = document.getElementById('dniInput');
+    inp.classList.add('err');
+    document.getElementById('dniErr').textContent = 'DNI incorrecto. Intentá de nuevo.';
+    setTimeout(()=>{ inp.classList.remove('err'); inp.value=''; }, 380);
+  }
+}
+
+function applyLogin(){
+  document.getElementById('pProf').value = currentUser.prof;
+  const photo = localStorage.getItem(`prof_photo_${currentUser.dni}`);
+  if(photo){
+    profPhoto = photo;
+    document.getElementById('prevProf').src = photo;
+    document.getElementById('photoProf').classList.add('loaded');
+  }
+  updateTopbarUser();
+  document.getElementById('loginView').classList.remove('active');
+  document.getElementById('uploadView').classList.add('active');
+  if(currentUser.admin) renderAdminList();
+}
+
+function updateTopbarUser(){
+  const area = document.getElementById('topUserArea');
+  if(!currentUser){ area.innerHTML=''; return; }
+  const photo = localStorage.getItem(`prof_photo_${currentUser.dni}`);
+  const av = photo ? `<img src="${photo}" alt="">` : initials(currentUser.name);
+  area.innerHTML = `
+    <div class="user-chip" ${currentUser.admin?'onclick="toggleAdminPanel()" title="Gestionar Equipo MOVE"':''}>
+      <div class="uc-avatar">${av}</div>
+      <div class="uc-name">${currentUser.name.split(' ')[0]}</div>
+      ${currentUser.admin?'<span style="font-size:9px;color:#00c853">⚙</span>':''}
+    </div>
+    <button class="logout-btn" onclick="logout()" title="Cerrar sesión">✕</button>`;
+}
+
+function logout(){
+  currentUser = null; selectedProf = null;
+  profPhoto = null; instLogo = null; imgR = null; imgL = null;
+  document.getElementById('pProf').value = '';
+  const pp = document.getElementById('prevProf');
+  if(pp){ pp.src=''; document.getElementById('photoProf').classList.remove('loaded'); }
+  document.getElementById('topUserArea').innerHTML = '';
+  closeAdminPanel();
+  document.getElementById('uploadView').classList.remove('active');
+  document.getElementById('reportView').classList.remove('active');
+  document.getElementById('loginView').classList.add('active');
+  initLogin();
+}
+
+/* ===== ADMIN PANEL ===== */
+function toggleAdminPanel(){ document.getElementById('adminPanel').classList.toggle('open') }
+function closeAdminPanel(){ document.getElementById('adminPanel').classList.remove('open') }
+
+function renderAdminList(){
+  document.getElementById('adminList').innerHTML = PROFESSIONALS.map(p => {
+    const photo = localStorage.getItem(`prof_photo_${p.dni}`);
+    const av = photo ? `<img src="${photo}" alt="">` : initials(p.name);
+    return `<div class="admin-item" id="adm_${p.dni}">
+      <div class="admin-avatar" id="admAv_${p.dni}">${av}</div>
+      <div>
+        <div class="admin-iname">${p.name}</div>
+        <div class="admin-idni">DNI ${p.dni}${p.admin?' · ADMIN':''}</div>
+      </div>
+      <label class="admin-upload-btn">Foto<input type="file" accept="image/*" onchange="uploadProfPhoto(event,'${p.dni}')"></label>
+    </div>`;
+  }).join('');
+}
+
+function uploadProfPhoto(e, dni){
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const url = ev.target.result;
+    localStorage.setItem(`prof_photo_${dni}`, url);
+    const admAv = document.getElementById(`admAv_${dni}`);
+    if(admAv) admAv.innerHTML = `<img src="${url}" alt="">`;
+    if(currentUser && currentUser.dni === dni){
+      profPhoto = url;
+      document.getElementById('prevProf').src = url;
+      document.getElementById('photoProf').classList.add('loaded');
+      updateTopbarUser();
+    }
+    initLogin();
+  };
+  reader.readAsDataURL(file);
+}
+
+document.getElementById('dniInput').addEventListener('keydown', e=>{ if(e.key==='Enter') tryLogin(); });
+initLogin();
 </script>
 </body>
 </html>
