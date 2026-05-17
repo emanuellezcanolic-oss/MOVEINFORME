@@ -271,7 +271,7 @@ function buildReport(data, patient) {
   const dateStr=new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
 
   if(!bilateral.length){
-    document.getElementById('reportContent').innerHTML=
+    document.getElementById('dashBody').innerHTML=
       '<div class="alert warning" style="margin:40px 20px"><div class="alert-icon">⚠️</div><div><div class="alert-title">ANÁLISIS BILATERAL INCOMPLETO</div><div class="alert-sub">No se detectaron ambos lados para ningún músculo. Verificá que las imágenes incluyan capturas de ambos lados.</div></div></div>';
     showReport(); return;
   }
@@ -290,7 +290,7 @@ function buildReport(data, patient) {
   });
 
   setTimeout(()=>{
-    const rc=document.getElementById('reportContent');
+    const rc=document.getElementById('dashBody');
     for(let i=1;i<bilateral.length;i++){
       const [ak,ag]=bilateral[i];
       rc.innerHTML+=buildCompactBilateral(ag.label,ag.R,ag.L);
