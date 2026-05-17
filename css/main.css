@@ -253,9 +253,8 @@ td.dom{color:#fff;font-weight:700}
 
   body,html{background:#07090a!important;color:#f0f0f0!important}
   .topbar,.report-topbar,.overlay{display:none!important}
-  #uploadView{display:none!important}
-  #reportView{display:block!important}
-  .view{display:block!important}
+  #loginView,#dniModal,#adminPanel,#uploadView{display:none!important}
+  #reportView{display:block!important;visibility:visible!important}
   .dash{background:#07090a!important;min-height:auto!important}
   .dash-body{padding:12px 14px!important;gap:10px!important}
 
