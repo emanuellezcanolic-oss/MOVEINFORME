@@ -4,21 +4,47 @@
 
 async function callGroqBatch(apiKey, batchImages, batchIdx, totalImages) {
   const img = batchImages[0];
-  const prompt = `Sos experto en evaluación isométrica con Valkyria Trainer (dinamómetro isométrico).
+  const prompt = `You are analyzing a screenshot from Valkyria Trainer isometric dynamometer software.
 
-Analizá la imagen ${batchIdx+1} de ${totalImages}.
+IMAGE ${batchIdx+1} OF ${totalImages}.
 
-Identificá:
-1. MÚSCULO — uno de estos keys exactos:
-   QUAD=Cuádriceps, HAM=Isquiotibiales, EXT_ROT=Rot.Externa, INT_ROT=Rot.Interna, ROW=Remo, MTP=Mid Thigh Pull, OTRO=otro
+## TASK
+Read the EXACT numeric values visible in this screenshot. DO NOT estimate, calculate, or infer any value. If you cannot read a number clearly and precisely, use null.
 
-2. LADO — solo la letra R (Derecho/Right) o L (Izquierdo/Left)
+## VALKYRIA TRAINER UI LAYOUT
+The software shows a results table with rows like:
+- "Force Max" or "Fmax" → peak force in Newtons (N), typically 20–800 N → maps to fmax
+- "Force Avg" or "Favg" → average force in Newtons (N) → maps to favg
+- "Force Init" or "Finit" → initial force in Newtons (N) → maps to finit
+- "Time to Peak" or "Tpeak" or "Time Max Force" → time in seconds (s), 0.2–10 s → maps to tpeak
+- "Force at 50" or "F50" or "Force 50ms" → force value at 50ms time point in N (NOT N/s) → maps to f50
+- "Force at 100" or "F100" or "Force 100ms" → force value at 100ms time point in N → maps to f100
+- "Force at 150" or "F150" or "Force 150ms" → force value at 150ms time point in N → maps to f150
+- "Force at 200" or "F200" or "Force 200ms" → force value at 200ms time point in N → maps to f200
+- "Force at 250" or "F250" or "Force 250ms" → force value at 250ms time point in N → maps to f250
+- "RFD at 50" or "RFD 50ms" → rate of force development at 50ms in N/s → maps to rfd50
+- "RFD at 100" or "RFD 100ms" → rate of force development at 100ms in N/s → maps to rfd100
+- "RFD at 150" or "RFD 150ms" → rate of force development at 150ms in N/s → maps to rfd150
+- "RFD at 200" or "RFD 200ms" → rate of force development at 200ms in N/s → maps to rfd200
+- "RFD at 250" or "RFD 250ms" → rate of force development at 250ms in N/s → maps to rfd250
 
-3. MÉTRICAS — todos los valores numéricos de la tabla
+The muscle name and side (Right/Left or Derecho/Izquierdo) usually appear in the header or title area of the screen.
 
-Respondé SOLO JSON válido sin markdown:
-{"resultados":[{"imagen":${batchIdx+1},"musculo_key":"EXT_ROT","musculo_label":"Rotador Externo Derecho","lado":"R","metrics":{"fmax":null,"favg":null,"finit":null,"tpeak":null,"f50":null,"f100":null,"f150":null,"f200":null,"f250":null,"rfd50":null,"rfd100":null,"rfd150":null,"rfd250":null}}]}
-Nunca inventes valores — null si no es claramente visible.`;
+## STRICT RULES
+1. ONLY report numbers you can read character-by-character from the image
+2. If a row is missing, partially cut off, or unclear → null
+3. NEVER calculate or estimate a value from other values
+4. NEVER use placeholder or example values
+5. RFD values are typically 50–2000 N/s; Force values 20–800 N; Time 0.2–5.0 s — if your reading falls outside these, double-check or use null
+
+## MUSCLE KEY
+Use exactly one of: QUAD, HAM, EXT_ROT, INT_ROT, ROW, MTP, OTRO
+
+## SIDE
+Use exactly R (Right/Derecho) or L (Left/Izquierdo)
+
+Respond ONLY with valid JSON matching this structure (replace ALL placeholder values with what you actually read from the image):
+{"resultados":[{"imagen":${batchIdx+1},"musculo_key":"<one of: QUAD|HAM|EXT_ROT|INT_ROT|ROW|MTP|OTRO>","musculo_label":"<full name of the muscle and side shown in the image>","lado":"<R if Right/Derecho or L if Left/Izquierdo>","metrics":{"fmax":<number or null>,"favg":<number or null>,"finit":<number or null>,"tpeak":<number or null>,"f50":<number or null>,"f100":<number or null>,"f150":<number or null>,"f200":<number or null>,"f250":<number or null>,"rfd50":<number or null>,"rfd100":<number or null>,"rfd150":<number or null>,"rfd250":<number or null>}}]}`;
 
   const msgContent = [
     { type: 'image_url', image_url: { url: `data:${img.mime};base64,${img.base64}` } },
@@ -27,7 +53,8 @@ Nunca inventes valores — null si no es claramente visible.`;
 
   const body = {
     model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-    max_tokens: 1024,
+    max_tokens: 2048,
+    temperature: 0,
     response_format: { type: 'json_object' },
     messages: [{ role: 'user', content: msgContent }]
   };

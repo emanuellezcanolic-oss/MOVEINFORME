@@ -381,3 +381,77 @@ td.dom{color:#fff;font-weight:700}
 /* Report photo display */
 .rpt-prof-photo{width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid #1a4a1a;flex-shrink:0}
 .rpt-inst-logo{max-height:48px;max-width:110px;object-fit:contain;border-radius:4px}
+
+/* ===== SHOULDER ROTATOR REPORT ===== */
+.sr-header{background:linear-gradient(135deg,#0d1a0d,#091209);border:1px solid #1a3a1a;border-radius:10px;padding:20px 26px;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.sr-title{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#fff}
+.sr-sub{font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#2a6a2a;margin-top:4px}
+.sr-sec-bar{background:linear-gradient(90deg,#0d1f0d,#091209);border:1px solid #1a3a1a;border-radius:7px;padding:10px 16px;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#00c853}
+.sr-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.sr-card{background:linear-gradient(180deg,#0d170d,#0a0f0a);border:1px solid #1a3a1a;border-radius:10px;padding:16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
+.sr-ci{font-size:22px}
+.sr-cv{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:#fff;line-height:1}
+.sr-cl{font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:1px;color:#2a6a2a;text-transform:uppercase;line-height:1.4;text-align:center}
+.sr-cl span{color:#1a4a1a}
+/* Force comparison table */
+.sr-force-tbl{width:100%;border-collapse:collapse}
+.sr-force-tbl thead tr{background:#060806}
+.sr-var{padding:10px 14px;font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#1e4a1e;font-weight:700;border-bottom:1px solid #1a3a1a;border-right:1px solid #1a3a1a;min-width:160px;vertical-align:bottom}
+.sr-th-er{padding:8px 14px;text-align:center;font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#00c853;font-weight:700;border-bottom:1px solid #1a3a1a;background:#001a00}
+.sr-th-ir{padding:8px 14px;text-align:center;font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#818cf8;font-weight:700;border-bottom:1px solid #1a3a1a;background:#0a0018}
+.sr-sub-th{padding:7px 12px;text-align:center;font-family:'Rajdhani',sans-serif;font-size:9px;color:#3a6a3a;border-bottom:2px solid #1a3a1a;font-weight:700;letter-spacing:1px}
+.sr-sub-th.sr-ir{color:#6366f1;background:#07000f}
+.sr-tc{padding:9px 14px;font-family:'Rajdhani',sans-serif;font-size:11px;color:#4a7a4a;border-bottom:1px solid #0c140c;border-right:1px solid #0c140c}
+.sr-tv{padding:9px 12px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;text-align:center;color:#00c853;border-bottom:1px solid #0c140c}
+.sr-tv.sr-ir{color:#818cf8;background:#07000f08}
+.sr-bold-row .sr-tc{color:#ccc;font-weight:700;background:#080e08}
+.sr-bold-row .sr-tv{color:#fff;font-weight:700;background:#080e08}
+.sr-bold-row .sr-tv.sr-ir{color:#c8c8ff;background:#09000f}
+/* Charts row */
+.sr-chart-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sr-legend{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;padding:8px}
+.sr-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+.er-der{background:#00c853}
+.sr-legend span{font-family:'Rajdhani',sans-serif;font-size:10px;color:#3a7a3a;display:flex;align-items:center}
+/* Global comparison */
+.sr-global-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sr-diff-tbl{width:100%;border-collapse:collapse;margin-top:10px}
+.sr-diff-tbl th{padding:7px 10px;font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#1e4a1e;border-bottom:1px solid #1a3a1a}
+.sr-diff-tbl td{padding:9px 10px;font-family:'Rajdhani',sans-serif;font-size:12px;color:#aaa;border-bottom:1px solid #0c140c;text-align:center}
+.sr-diff-tbl td:first-child{text-align:left;color:#4a7a4a;font-size:11px}
+.sr-diff-alarm{color:#ef4444;font-weight:700;font-size:11px;line-height:1.4}
+.sr-diff-ok{color:#00c853;font-weight:700;font-size:11px;line-height:1.4}
+/* Misc row */
+.sr-misc-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.sr-misc-card{text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center}
+.sr-misc-lbl{font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#2a6a2a;font-weight:700}
+.sr-misc-val{font-family:'Rajdhani',sans-serif;font-size:11px;color:#5a8a5a}
+.sr-misc-val strong{color:#fff}
+/* Interpretation + refs */
+.sr-interp-row{display:grid;grid-template-columns:1.2fr 1fr;gap:12px}
+.sr-interp-item{display:flex;gap:10px;align-items:flex-start;padding:10px;background:#080d08;border:1px solid #1a3a1a;border-radius:6px}
+.sr-interp-label{font-family:'Rajdhani',sans-serif;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#00c853;font-weight:700;margin-bottom:3px}
+.sr-interp-text{font-family:'Rajdhani',sans-serif;font-size:11px;color:#5a8a5a;line-height:1.5}
+.sr-refs{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.sr-ref{display:flex;gap:10px;align-items:flex-start}
+.sr-rnum{flex-shrink:0;width:20px;height:20px;border-radius:50%;background:#00c85320;border:1px solid #00c85340;color:#00c853;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.sr-ref div{font-family:'Rajdhani',sans-serif;font-size:10px;color:#3a6a3a;line-height:1.5}
+.sr-ref em{color:#2a5a2a}
+.sr-ref strong{color:#5a9a5a}
+/* Responsive */
+@media(max-width:900px){
+  .sr-cards{grid-template-columns:repeat(2,1fr)}
+  .sr-chart-row,.sr-global-row,.sr-interp-row{grid-template-columns:1fr}
+  .sr-misc-row{grid-template-columns:1fr 1fr}
+}
+@media(max-width:600px){
+  .sr-cards,.sr-misc-row{grid-template-columns:1fr 1fr}
+}
+/* Print */
+@media print{
+  .sr-header{background:#0d1a0d!important;border:1px solid #1a3a1a!important}
+  .sr-sec-bar{background:#0d1f0d!important}
+  .sr-card{background:#0d170d!important;border:1px solid #1a3a1a!important}
+  .sr-force-tbl,.sr-diff-tbl{border-collapse:collapse!important}
+  .sr-chart-row,.sr-global-row,.sr-interp-row,.sr-misc-row{grid-template-columns:1fr 1fr!important}
+}

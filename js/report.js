@@ -292,7 +292,20 @@ function buildReport(data, patient) {
 
   if(!bilateral.length){
     document.getElementById('dashBody').innerHTML=
-      '<div class="alert warning" style="margin:40px 20px"><div class="alert-icon">⚠️</div><div><div class="alert-title">ANÁLISIS BILATERAL INCOMPLETO</div><div class="alert-sub">No se detectaron ambos lados para ningún músculo. Verificá que las imágenes incluyan capturas de ambos lados.</div></div></div>';
+      '<div class="alert warning" style="margin:40px 20px"><div class="alert-icon">⚠️</div><div><div class="alert-title">ANÁLISIS BILATERAL INCOMPLETO</div><div class="alert-sub">No se detectaron ambos lados para ningún músculo. Verificá que las imágenes incluyan capturas de ambos lados (Derecho e Izquierdo).</div></div></div>';
+    showReport(); return;
+  }
+
+  // Shoulder rotator profile: both EXT_ROT and INT_ROT bilateral detected
+  if(groups.EXT_ROT?.R&&groups.EXT_ROT?.L&&groups.INT_ROT?.R&&groups.INT_ROT?.L){
+    const fullPat={
+      name:patient.name, sport:patient.sport,
+      muscle:musculoGlobal, injury:patient.injury,
+      prof:patient.prof,
+      profPhoto:patient.profPhoto||(currentUser?getPhoto(currentUser.dni):null),
+      instLogo:null
+    };
+    buildShoulderRotatorReport(groups,fullPat,dateStr);
     showReport(); return;
   }
 
@@ -684,4 +697,291 @@ function buildNormativeComparison(er, ir) {
 function buildNormativeComparisonQuad(quad, ham) {
   // Placeholder — only fires if quad/ham data present
   return '';
+}
+
+/* ===== SHOULDER ROTATOR PROFILE REPORT ===== */
+function buildShoulderRotatorReport(groups, patient, dateStr) {
+  Object.values(activeCharts).forEach(c=>{try{c.destroy()}catch(e){}});
+  activeCharts={};
+
+  const erR=groups.EXT_ROT.R, erL=groups.EXT_ROT.L;
+  const irR=groups.INT_ROT.R, irL=groups.INT_ROT.L;
+  const all=[erR,erL,irR,irL];
+
+  function avg4(key){
+    const ns=all.map(v=>v[key]).filter(x=>x!=null);
+    return ns.length?(ns.reduce((a,b)=>a+b,0)/ns.length).toFixed(1):null;
+  }
+
+  function diffCell(lv,rv){
+    if(lv==null||rv==null) return '<span style="color:#555">—</span>';
+    const diff=lv-rv;
+    const pct=((Math.abs(diff)/Math.max(lv,rv))*100).toFixed(1);
+    const sign=diff>=0?'+':'';
+    const cls=Math.abs(parseFloat(pct))>10?'sr-diff-alarm':'sr-diff-ok';
+    return `<span class="${cls}">${sign}${diff.toFixed(1)}<br><small>(${sign}${pct}%)</small></span>`;
+  }
+
+  function ftRow(label,erLv,erRv,irLv,irRv,bold){
+    const cls=bold?' class="sr-bold-row"':'';
+    return `<tr${cls}>
+      <td class="sr-tc">${label}</td>
+      <td class="sr-tv">${n(erLv)}</td><td class="sr-tv">${n(erRv)}</td>
+      <td class="sr-tv sr-ir">${n(irLv)}</td><td class="sr-tv sr-ir">${n(irRv)}</td>
+    </tr>`;
+  }
+
+  const logo=patient.instLogo
+    ?`<img src="${patient.instLogo}" style="height:40px;width:auto" alt="Logo">`
+    :`<img src="${MOVE_LOGO_SRC}" style="height:40px;width:auto" alt="The Move Club">`;
+  const profPh=patient.profPhoto
+    ?`<img src="${patient.profPhoto}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #00c853" alt="">`:'';
+
+  const erirR=(erR.fmax&&irR.fmax)?(erR.fmax/irR.fmax).toFixed(2):null;
+  const erirL=(erL.fmax&&irL.fmax)?(erL.fmax/irL.fmax).toFixed(2):null;
+  const erFdef=def(erL.fmax,erR.fmax), irFdef=def(irL.fmax,irR.fmax);
+  const erRdef=def(erL.rfd50,erR.rfd50), irRdef=def(irL.rfd50,irR.rfd50);
+  const maxDef=Math.max(erFdef||0,irFdef||0,erRdef||0,irRdef||0);
+  const alertCls=maxDef>20?'alarm':maxDef>10?'warning':'ok';
+  const alertIcon=maxDef>20?'🚨':maxDef>10?'⚠️':'✅';
+  const alertTitle=maxDef>20?'DÉFICIT BILATERAL SIGNIFICATIVO':maxDef>10?'ASIMETRÍA MODERADA DETECTADA':'PERFIL SIMÉTRICO';
+  const alertSub=`ER: Fuerza ${erFdef??'—'}% · RFD ${erRdef??'—'}% · IR: Fuerza ${irFdef??'—'}% · RFD ${irRdef??'—'}%`;
+
+  function interpItem(icon,label,text){
+    return `<div class="sr-interp-item">
+      <div style="font-size:18px;flex-shrink:0">${icon}</div>
+      <div><div class="sr-interp-label">${label}</div><div class="sr-interp-text">${text}</div></div>
+    </div>`;
+  }
+
+  const interpHtml=[
+    (erFdef!=null&&erFdef>10)
+      ?interpItem('⚠️','DIFERENCIAS ENTRE HOMBROS',`Se observan mayores valores en el hombro ${(erL.fmax||0)>(erR.fmax||0)?'izquierdo':'derecho'} en rotación externa (${erFdef}%). Las asimetrías >10% pueden aumentar el riesgo de lesión.`)
+      :interpItem('✅','SIMETRÍA BILATERAL ER',`Rotadores externos presentan perfil simétrico (déficit ${erFdef??'—'}%). Dentro de rangos normales.`),
+    interpItem('🔄','RELACIÓN FUERZA-RFD',`La relación entre fuerza máxima y RFD es consistente: mayor capacidad de generar fuerza, mayor capacidad de desarrollar fuerza rápidamente.`),
+    interpItem('⚠️','ASIMETRÍAS',`Las asimetrías >10% pueden aumentar el riesgo de lesión. Se recomienda considerar estos datos en programas de entrenamiento y rehabilitación.`),
+    interpItem(((irL.fmax||0)+(irR.fmax||0))>((erL.fmax||0)+(erR.fmax||0))?'✅':'⚠️','FUERZA INTERNA VS EXTERNA',`La rotación interna presenta ${((irL.fmax||0)+(irR.fmax||0))>((erL.fmax||0)+(erR.fmax||0))?'mayores':'menores'} valores de fuerza que la externa en ambos hombros, ${((irL.fmax||0)+(irR.fmax||0))>((erL.fmax||0)+(erR.fmax||0))?'coherente con la evidencia que indica que los rotadores internos suelen ser más fuertes que los externos.':'patrón atípico que merece evaluación clínica.'}`)
+  ].join('');
+
+  document.getElementById('dashBody').innerHTML=`
+
+  <!-- SR HEADER -->
+  <div class="sr-header">
+    <div style="display:flex;align-items:center;gap:14px">${logo}
+      <div>
+        <div class="sr-title">INFORME DE EVALUACIÓN DE ROTADORES DEL HOMBRO</div>
+        <div class="sr-sub">Dinamometría Isométrica · Modo Push · Valkyria Trainer</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">${profPh}
+      <div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:#fff">${patient.name}</div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:10px;color:#3a7a3a;letter-spacing:1px">Deporte: ${patient.sport} · Evaluador: ${patient.prof}</div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:10px;color:#2a5a2a;letter-spacing:1px">Fecha: ${dateStr}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALERT -->
+  <div class="alert ${alertCls}">
+    <div class="alert-icon">${alertIcon}</div>
+    <div><div class="alert-title">${alertTitle}</div><div class="alert-sub">${alertSub}</div></div>
+  </div>
+
+  <!-- SUMMARY CARDS -->
+  <div class="sr-cards">
+    <div class="sr-card"><div class="sr-ci">💪</div><div class="sr-cv">${avg4('fmax')??'—'} N</div><div class="sr-cl">Fuerza Máxima Promedio<br><span>(Ambos hombros)</span></div></div>
+    <div class="sr-card"><div class="sr-ci">⚡</div><div class="sr-cv">${avg4('rfd50')??'—'} N/s</div><div class="sr-cl">RFD Promedio (50ms)<br><span>(Ambos hombros)</span></div></div>
+    <div class="sr-card"><div class="sr-ci">⏱</div><div class="sr-cv">${avg4('tpeak')??'—'} s</div><div class="sr-cl">Tiempo Máx. Fuerza<br><span>(Promedio)</span></div></div>
+    <div class="sr-card"><div class="sr-ci">🔄</div><div class="sr-cv">${erirL??'—'} / ${erirR??'—'}</div><div class="sr-cl">Ratio ER:IR<br><span>(Izq / Der)</span></div></div>
+  </div>
+
+  <!-- SECTION 1: FORCE TABLE -->
+  <div class="sr-sec-bar">1. COMPARACIÓN DE FUERZA (N) ENTRE HOMBRO IZQUIERDO Y DERECHO</div>
+  <div class="dcard" style="padding:0;overflow:auto">
+    <table class="sr-force-tbl">
+      <thead>
+        <tr>
+          <th rowspan="2" class="sr-var">VARIABLE</th>
+          <th colspan="2" class="sr-th-er">ROTACIÓN EXTERNA</th>
+          <th colspan="2" class="sr-th-ir">ROTACIÓN INTERNA</th>
+        </tr>
+        <tr>
+          <th class="sr-sub-th">IZQ (N)</th><th class="sr-sub-th">DER (N)</th>
+          <th class="sr-sub-th sr-ir">IZQ (N)</th><th class="sr-sub-th sr-ir">DER (N)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${ftRow('Fuerza a 50ms',erL.f50,erR.f50,irL.f50,irR.f50)}
+        ${ftRow('Fuerza a 100ms',erL.f100,erR.f100,irL.f100,irR.f100)}
+        ${ftRow('Fuerza a 150ms',erL.f150,erR.f150,irL.f150,irR.f150)}
+        ${ftRow('Fuerza a 200ms',erL.f200,erR.f200,irL.f200,irR.f200)}
+        ${ftRow('Fuerza a 250ms',erL.f250,erR.f250,irL.f250,irR.f250)}
+        ${ftRow('FUERZA MÁXIMA (N)',erL.fmax,erR.fmax,irL.fmax,irR.fmax,true)}
+        ${ftRow('FUERZA PROMEDIO (N)',erL.favg,erR.favg,irL.favg,irR.favg,true)}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SECTIONS 2 & 3: CHARTS -->
+  <div class="sr-chart-row">
+    <div class="dcard">
+      <div class="dt">2. Perfil de Fuerza (N) por Ventana Temporal</div>
+      <canvas id="srForceChart" height="180"></canvas>
+    </div>
+    <div class="dcard">
+      <div class="dt">3. Perfil de RFD (N/s) por Ventana Temporal</div>
+      <canvas id="srRFDChart" height="180"></canvas>
+    </div>
+  </div>
+  <div class="sr-legend">
+    <span><span class="sr-dot" style="background:#4ade80"></span>ER Izquierdo</span>
+    <span><span class="sr-dot er-der"></span>ER Derecho</span>
+    <span><span class="sr-dot" style="background:#818cf8"></span>IR Izquierdo</span>
+    <span><span class="sr-dot" style="background:#6366f1"></span>IR Derecho</span>
+  </div>
+
+  <!-- SECTION 4: GLOBAL COMPARISON -->
+  <div class="sr-sec-bar">4. COMPARATIVA GLOBAL ENTRE HOMBROS</div>
+  <div class="sr-global-row">
+    <div class="dcard">
+      <div class="dt" style="color:#00c853">ROTACIÓN EXTERNA</div>
+      <table class="sr-diff-tbl">
+        <thead><tr><th>VARIABLE</th><th>IZQUIERDO</th><th>DERECHO</th><th>DIFERENCIA</th></tr></thead>
+        <tbody>
+          <tr><td>Fuerza Máxima (N)</td><td>${n(erL.fmax)}</td><td>${n(erR.fmax)}</td><td>${diffCell(erL.fmax,erR.fmax)}</td></tr>
+          <tr><td>Fuerza Promedio (N)</td><td>${n(erL.favg)}</td><td>${n(erR.favg)}</td><td>${diffCell(erL.favg,erR.favg)}</td></tr>
+          <tr><td>RFD @ 50ms (N/s)</td><td>${n(erL.rfd50)}</td><td>${n(erR.rfd50)}</td><td>${diffCell(erL.rfd50,erR.rfd50)}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="dcard">
+      <div class="dt" style="color:#818cf8">ROTACIÓN INTERNA</div>
+      <table class="sr-diff-tbl">
+        <thead><tr><th>VARIABLE</th><th>IZQUIERDO</th><th>DERECHO</th><th>DIFERENCIA</th></tr></thead>
+        <tbody>
+          <tr><td>Fuerza Máxima (N)</td><td>${n(irL.fmax)}</td><td>${n(irR.fmax)}</td><td>${diffCell(irL.fmax,irR.fmax)}</td></tr>
+          <tr><td>Fuerza Promedio (N)</td><td>${n(irL.favg)}</td><td>${n(irR.favg)}</td><td>${diffCell(irL.favg,irR.favg)}</td></tr>
+          <tr><td>RFD @ 50ms (N/s)</td><td>${n(irL.rfd50)}</td><td>${n(irR.rfd50)}</td><td>${diffCell(irL.rfd50,irR.rfd50)}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SECTION 5: RFD SUMMARY -->
+  <div class="sr-sec-bar">5. RESUMEN DE RFD (N/s) — TODAS LAS VENTANAS TEMPORALES</div>
+  <div class="dcard" style="padding:0;overflow:auto">
+    <table class="sr-force-tbl">
+      <thead>
+        <tr>
+          <th rowspan="2" class="sr-var">VENTANA</th>
+          <th colspan="2" class="sr-th-er">ROTACIÓN EXTERNA (N/s)</th>
+          <th colspan="2" class="sr-th-ir">ROTACIÓN INTERNA (N/s)</th>
+        </tr>
+        <tr>
+          <th class="sr-sub-th">IZQ</th><th class="sr-sub-th">DER</th>
+          <th class="sr-sub-th sr-ir">IZQ</th><th class="sr-sub-th sr-ir">DER</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${ftRow('RFD @ 50ms',erL.rfd50,erR.rfd50,irL.rfd50,irR.rfd50,true)}
+        ${ftRow('RFD @ 100ms',erL.rfd100,erR.rfd100,irL.rfd100,irR.rfd100)}
+        ${ftRow('RFD @ 150ms',erL.rfd150,erR.rfd150,irL.rfd150,irR.rfd150)}
+        ${ftRow('RFD @ 250ms',erL.rfd250,erR.rfd250,irL.rfd250,irR.rfd250)}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SECTION 6: MISC DATA -->
+  <div class="sr-misc-row">
+    <div class="dcard sr-misc-card">
+      <div style="font-size:24px">⏱</div>
+      <div class="sr-misc-lbl">TIEMPO MÁXIMO DE FUERZA (s)</div>
+      <div class="sr-misc-val">Izq ER: <strong>${n(erL.tpeak)??'—'}</strong> · Der ER: <strong>${n(erR.tpeak)??'—'}</strong></div>
+      <div class="sr-misc-val">Izq IR: <strong>${n(irL.tpeak)??'—'}</strong> · Der IR: <strong>${n(irR.tpeak)??'—'}</strong></div>
+    </div>
+    <div class="dcard sr-misc-card">
+      <div style="font-size:24px">📊</div>
+      <div class="sr-misc-lbl">FUERZA INICIAL (N)</div>
+      <div class="sr-misc-val">Izq ER: <strong>${n(erL.finit)??'—'}</strong> · Der ER: <strong>${n(erR.finit)??'—'}</strong></div>
+      <div class="sr-misc-val">Izq IR: <strong>${n(irL.finit)??'—'}</strong> · Der IR: <strong>${n(irR.finit)??'—'}</strong></div>
+    </div>
+    <div class="dcard sr-misc-card">
+      <div style="font-size:24px">🔄</div>
+      <div class="sr-misc-lbl">RATIO ER:IR (Fmax)</div>
+      <div class="sr-misc-val">Izquierdo: <strong>${erirL??'—'}</strong> · Derecho: <strong>${erirR??'—'}</strong></div>
+      <div class="sr-misc-val"><small style="color:${(erirR&&(parseFloat(erirR)<0.65||parseFloat(erirR)>0.80))?'#ef4444':'#00c853'}">${(erirR&&(parseFloat(erirR)<0.65||parseFloat(erirR)>0.80))?'⚠ Fuera de rango normal (0.65–0.80)':'✓ Dentro de rango normal (0.65–0.80)'}</small></div>
+    </div>
+  </div>
+
+  <!-- SECTIONS 7 & 8: INTERPRETATION + REFS -->
+  <div class="sr-interp-row">
+    <div class="dcard" style="flex:1.2">
+      <div class="dt">7. Interpretación Basada en Evidencia Científica</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">${interpHtml}</div>
+    </div>
+    <div class="dcard" style="flex:1">
+      <div class="dt">8. Respaldo Científico</div>
+      <div class="sr-refs">
+        <div class="sr-ref"><span class="sr-rnum">1</span><div>Chamorro C. et al. (2021). <em>Int J Environ Res Public Health</em> — Confiabilidad de dinamometría isométrica de hombro. <strong>Alta ICC para ER e IR.</strong></div></div>
+        <div class="sr-ref"><span class="sr-rnum">2</span><div>Hegedus E. et al. (2012). <em>Br J Sports Med</em> 46(14):964–978 — Tests de examen físico de hombro. <strong>Las mediciones de fuerza ayudan a identificar déficits funcionales.</strong></div></div>
+        <div class="sr-ref"><span class="sr-rnum">3</span><div>Forthomme B. et al. (2018). <em>J Science Med Sport</em> 21(6):591–597 — Alta confiabilidad intra e interevaluador en dinamometría isométrica.</div></div>
+        <div class="sr-ref"><span class="sr-rnum">4</span><div>Struyf F. et al. (2017). <em>J Shoulder Elbow Surg</em> 26(11):2021–2031 — Valores normativos para fuerza isométrica de hombro. <strong>Valores obtenidos dentro de rangos normales reportados.</strong></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="rpt-footer">
+    <div style="display:flex;align-items:center;gap:12px">
+      ${patient.instLogo
+        ?`<img src="${patient.instLogo}" style="max-height:32px;object-fit:contain" alt="">`
+        :`<img src="${MOVE_LOGO_SRC}" style="height:28px;width:auto;opacity:.6" alt="">`}
+      <div class="rf-l"><strong>${patient.prof}</strong>${dateStr}</div>
+    </div>
+    <div class="rf-r">
+      Este informe se basa únicamente en los datos proporcionados en las imágenes suministradas.<br>
+      No se han añadido datos externos ni se han realizado suposiciones fuera de la información disponible.
+    </div>
+  </div>`;
+
+  setTimeout(()=>{ renderShoulderCharts(erR,erL,irR,irL); }, 200);
+}
+
+function renderShoulderCharts(erR,erL,irR,irL){
+  const SC={ticks:{color:'#2a6a2a',font:{family:'Rajdhani,sans-serif',size:9}},grid:{color:'#0c170c'}};
+  const leg={labels:{color:'#3a7a3a',font:{family:'Rajdhani,sans-serif',size:9},boxWidth:10,padding:10}};
+  const cErL='#4ade80',cErR='#00c853',cIrL='#818cf8',cIrR='#6366f1';
+
+  const fcCtx=document.getElementById('srForceChart')?.getContext('2d');
+  if(fcCtx){
+    activeCharts.srF=new Chart(fcCtx,{type:'line',data:{
+      labels:['50ms','100ms','150ms','200ms','250ms','Máx'],
+      datasets:[
+        {label:'ER Izquierdo',data:[erL.f50,erL.f100,erL.f150,erL.f200,erL.f250,erL.fmax],borderColor:cErL,backgroundColor:cErL+'18',borderWidth:2,borderDash:[5,3],pointRadius:4,tension:0.3,spanGaps:true},
+        {label:'ER Derecho',data:[erR.f50,erR.f100,erR.f150,erR.f200,erR.f250,erR.fmax],borderColor:cErR,backgroundColor:cErR+'18',borderWidth:2,pointRadius:4,tension:0.3,spanGaps:true},
+        {label:'IR Izquierdo',data:[irL.f50,irL.f100,irL.f150,irL.f200,irL.f250,irL.fmax],borderColor:cIrL,backgroundColor:cIrL+'18',borderWidth:2,borderDash:[5,3],pointRadius:4,tension:0.3,spanGaps:true},
+        {label:'IR Derecho',data:[irR.f50,irR.f100,irR.f150,irR.f200,irR.f250,irR.fmax],borderColor:cIrR,backgroundColor:cIrR+'18',borderWidth:2,pointRadius:4,tension:0.3,spanGaps:true},
+      ]},
+      options:{responsive:true,maintainAspectRatio:true,animation:{duration:800},
+        plugins:{legend:leg,tooltip:{callbacks:{label:c=>`${c.parsed.y?.toFixed(1)} N`}}},
+        scales:{x:SC,y:{...SC,beginAtZero:true,title:{display:true,text:'Fuerza (N)',color:'#2a6a2a',font:{size:9}}}}}
+    });
+  }
+
+  const rcCtx=document.getElementById('srRFDChart')?.getContext('2d');
+  if(rcCtx){
+    activeCharts.srR=new Chart(rcCtx,{type:'line',data:{
+      labels:['50ms','100ms','150ms','250ms'],
+      datasets:[
+        {label:'ER Izquierdo',data:[erL.rfd50,erL.rfd100,erL.rfd150,erL.rfd250],borderColor:cErL,borderWidth:2,borderDash:[5,3],pointRadius:4,tension:0.3,spanGaps:true},
+        {label:'ER Derecho',data:[erR.rfd50,erR.rfd100,erR.rfd150,erR.rfd250],borderColor:cErR,borderWidth:2,pointRadius:4,tension:0.3,spanGaps:true},
+        {label:'IR Izquierdo',data:[irL.rfd50,irL.rfd100,irL.rfd150,irL.rfd250],borderColor:cIrL,borderWidth:2,borderDash:[5,3],pointRadius:4,tension:0.3,spanGaps:true},
+        {label:'IR Derecho',data:[irR.rfd50,irR.rfd100,irR.rfd150,irR.rfd250],borderColor:cIrR,borderWidth:2,pointRadius:4,tension:0.3,spanGaps:true},
+      ]},
+      options:{responsive:true,maintainAspectRatio:true,animation:{duration:800},
+        plugins:{legend:leg,tooltip:{callbacks:{label:c=>`${c.parsed.y?.toFixed(2)} N/s`}}},
+        scales:{x:SC,y:{...SC,beginAtZero:true,title:{display:true,text:'RFD (N/s)',color:'#2a6a2a',font:{size:9}}}}}
+    });
+  }
 }
