@@ -107,17 +107,37 @@ Respond ONLY with valid JSON matching this structure (replace ALL placeholder va
 async function extractWithClaude(apiKey, images, patient) {
   const allResults = [];
 
+  async function callWithRetry(img, idx, total, maxRetries=3) {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        return await callGroqBatch(apiKey, [img], idx, total);
+      } catch(e) {
+        const is429 = e.message && (e.message.includes('429') || e.message.includes('Límite'));
+        if (is429 && attempt < maxRetries - 1) {
+          const waitSec = 35 + attempt * 20;
+          const sub = document.getElementById('overlay-sub');
+          for (let s = waitSec; s > 0; s--) {
+            if (sub) sub.textContent = `Límite de requests — esperando ${s}s antes de reintentar imagen ${idx+1}...`;
+            await new Promise(r => setTimeout(r, 1000));
+          }
+        } else {
+          throw e;
+        }
+      }
+    }
+  }
+
   for (let i = 0; i < images.length; i++) {
     const sub = document.getElementById('overlay-sub');
     if (sub) sub.textContent = `Analizando imagen ${i+1} de ${images.length}...`;
 
-    const batchData = await callGroqBatch(apiKey, [images[i]], i, images.length);
+    const batchData = await callWithRetry(images[i], i, images.length);
     if (batchData.resultados) {
       allResults.push(...batchData.resultados);
     }
 
     if (i + 1 < images.length) {
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, 4000));
     }
   }
 
