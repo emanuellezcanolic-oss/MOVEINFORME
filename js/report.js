@@ -277,13 +277,43 @@ function buildReport(data, patient) {
     return map[k]||k;
   }
 
-  const groups={};
+  // Accumulate raw attempts per muscle+side (supports multiple reps of same side)
+  const rawGroups={};
   results.forEach(r=>{
     const k=normKey(r.musculo_key);
     const lado=normLado(r.lado);
-    if(!groups[k]) groups[k]={label:r.musculo_label||MUSCLE_LABELS[k]||'Músculo',R:null,L:null};
-    if(lado==='R') groups[k].R=r.metrics;
-    else if(lado==='L') groups[k].L=r.metrics;
+    if(!rawGroups[k]) rawGroups[k]={label:r.musculo_label||MUSCLE_LABELS[k]||'Músculo',R:[],L:[]};
+    if(lado==='R') rawGroups[k].R.push(r.metrics);
+    else if(lado==='L') rawGroups[k].L.push(r.metrics);
+  });
+
+  // Merge multiple attempts: compute mean, SD, CV% per metric
+  const METRIC_KEYS=['fmax','favg','finit','tpeak','f50','f100','f150','f200','f250','rfd50','rfd100','rfd150','rfd250'];
+  function mergeAttempts(attempts){
+    if(!attempts||!attempts.length) return null;
+    if(attempts.length===1) return {metrics:attempts[0], reliability:null};
+    const merged={}, reliability={};
+    METRIC_KEYS.forEach(key=>{
+      const vals=attempts.map(a=>a[key]).filter(v=>v!=null&&!isNaN(v));
+      if(!vals.length){merged[key]=null;return;}
+      const mean=vals.reduce((a,b)=>a+b,0)/vals.length;
+      const sd=vals.length>1?Math.sqrt(vals.reduce((s,v)=>s+(v-mean)**2,0)/(vals.length-1)):0;
+      const cv=mean!==0?(sd/mean)*100:0;
+      merged[key]=+mean.toFixed(2);
+      reliability[key]={n:vals.length, mean:+mean.toFixed(2), sd:+sd.toFixed(2), cv:+cv.toFixed(1), vals};
+    });
+    return {metrics:merged, reliability};
+  }
+
+  const groups={};
+  const groupReliability={};
+  Object.entries(rawGroups).forEach(([k,g])=>{
+    const mergedR=mergeAttempts(g.R);
+    const mergedL=mergeAttempts(g.L);
+    groups[k]={label:g.label, R:mergedR?.metrics||null, L:mergedL?.metrics||null};
+    if(mergedR?.reliability||mergedL?.reliability){
+      groupReliability[k]={R:mergedR?.reliability||null, L:mergedL?.reliability||null, nR:g.R.length, nL:g.L.length};
+    }
   });
 
   console.log('[buildReport] groups:', JSON.stringify(Object.fromEntries(Object.entries(groups).map(([k,g])=>([k,{R:!!g.R,L:!!g.L}])))));
@@ -305,7 +335,7 @@ function buildReport(data, patient) {
       profPhoto:patient.profPhoto||(currentUser?getPhoto(currentUser.dni):null),
       instLogo:null
     };
-    buildQuadHamReport(groups, fullPat, dateStr);
+    buildQuadHamReport(groups, fullPat, dateStr, groupReliability);
     showReport(); return;
   }
 
@@ -318,7 +348,7 @@ function buildReport(data, patient) {
       profPhoto:patient.profPhoto||(currentUser?getPhoto(currentUser.dni):null),
       instLogo:null
     };
-    buildShoulderRotatorReport(groups,fullPat,dateStr);
+    buildShoulderRotatorReport(groups,fullPat,dateStr,groupReliability);
     showReport(); return;
   }
 
@@ -337,6 +367,8 @@ function buildReport(data, patient) {
 
   setTimeout(()=>{
     const rc=document.getElementById('dashBody');
+    const relHtml=buildReliabilityBlock(groupReliability);
+    if(relHtml) rc.insertAdjacentHTML('afterbegin', relHtml);
     for(let i=1;i<bilateral.length;i++){
       const [ak,ag]=bilateral[i];
       rc.insertAdjacentHTML('beforeend', buildCompactBilateral(ag.label,ag.R,ag.L));
@@ -707,6 +739,81 @@ function buildNormativeComparison(er, ir) {
   </div>`;
 }
 
+/* ===== RELIABILITY BLOCK ===== */
+function buildReliabilityBlock(groupReliability) {
+  if(!groupReliability||!Object.keys(groupReliability).length) return '';
+
+  const LABEL_MAP={
+    fmax:'Fuerza Máxima (N)', favg:'Fuerza Promedio (N)', finit:'Fuerza Inicial (N)',
+    tpeak:'Tiempo al Pico (s)',
+    rfd50:'RFD @ 50ms (N/s)', rfd100:'RFD @ 100ms (N/s)',
+    rfd150:'RFD @ 150ms (N/s)', rfd250:'RFD @ 250ms (N/s)'
+  };
+  // CV thresholds from literature (Maffiuletti 2016, VALD Health)
+  // Force metrics: <5% excellent, 5-10% acceptable, >10% poor
+  // RFD metrics: <10% excellent, 10-20% acceptable, >20% poor (more variable by nature)
+  const CV_THRESH={
+    fmax:{ok:5,warn:10}, favg:{ok:5,warn:10}, finit:{ok:8,warn:15}, tpeak:{ok:10,warn:20},
+    rfd50:{ok:15,warn:25}, rfd100:{ok:12,warn:22}, rfd150:{ok:12,warn:22}, rfd250:{ok:10,warn:20}
+  };
+
+  function cvChip(key, cv) {
+    const t=CV_THRESH[key]||{ok:10,warn:20};
+    if(cv<=t.ok) return `<span style="background:#00c85322;color:#00c853;border:1px solid #00c85344;border-radius:4px;padding:2px 7px;font-size:9px;font-family:'Rajdhani',sans-serif;font-weight:700">✓ FIABLE (${cv}%)</span>`;
+    if(cv<=t.warn) return `<span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;border-radius:4px;padding:2px 7px;font-size:9px;font-family:'Rajdhani',sans-serif;font-weight:700">~ MODERADO (${cv}%)</span>`;
+    return `<span style="background:#ef444422;color:#ef4444;border:1px solid #ef444444;border-radius:4px;padding:2px 7px;font-size:9px;font-family:'Rajdhani',sans-serif;font-weight:700">✗ VARIABLE (${cv}%)</span>`;
+  }
+
+  let sectionsHtml='';
+  Object.entries(groupReliability).forEach(([muscKey, relData])=>{
+    const muscLabel=MUSCLE_LABELS[muscKey]||muscKey;
+    ['R','L'].forEach(side=>{
+      const rel=relData[side];
+      const n=relData[side==='R'?'nR':'nL'];
+      if(!rel||n<2) return;
+      const sideLabel=side==='R'?'Derecho':'Izquierdo';
+      const rows=Object.entries(rel).filter(([k,v])=>LABEL_MAP[k]&&v).map(([key,v])=>{
+        return `<tr>
+          <td style="padding:6px 10px;font-size:11px;color:#3a7a3a;font-family:'Rajdhani',sans-serif">${LABEL_MAP[key]}</td>
+          <td style="padding:6px 10px;font-size:11px;font-weight:700;color:#d0f0d0;text-align:center">${v.mean}</td>
+          <td style="padding:6px 10px;font-size:11px;color:#8ab8a8;text-align:center">± ${v.sd}</td>
+          <td style="padding:6px 8px;text-align:center">${cvChip(key,v.cv)}</td>
+          <td style="padding:6px 10px;font-size:9px;color:#2a5a2a;text-align:center">${v.vals.join(' / ')}</td>
+        </tr>`;
+      }).join('');
+      if(!rows) return;
+      sectionsHtml+=`
+      <div style="margin-bottom:16px">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#00c853;margin-bottom:8px">${muscLabel} — ${sideLabel} (${n} intentos)</div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="border-bottom:1px solid #1a3a1a">
+            <th style="padding:5px 10px;font-size:10px;color:#2a5a2a;text-align:left;font-family:'Rajdhani',sans-serif">MÉTRICA</th>
+            <th style="padding:5px 10px;font-size:10px;color:#2a5a2a;font-family:'Rajdhani',sans-serif">MEDIA</th>
+            <th style="padding:5px 10px;font-size:10px;color:#2a5a2a;font-family:'Rajdhani',sans-serif">DS</th>
+            <th style="padding:5px 10px;font-size:10px;color:#2a5a2a;font-family:'Rajdhani',sans-serif">CV%</th>
+            <th style="padding:5px 10px;font-size:10px;color:#2a5a2a;font-family:'Rajdhani',sans-serif">INTENTOS</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    });
+  });
+
+  if(!sectionsHtml) return '';
+
+  return `<div class="section-divider">Fiabilidad de los Intentos — Media ± DS · CV%</div>
+  <div class="dcard" style="margin:0 0 16px">
+    <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:#00c853;margin-bottom:4px">
+      📐 ANÁLISIS DE FIABILIDAD ENTRE INTENTOS
+    </div>
+    <div style="font-size:10px;color:#2a5a2a;margin-bottom:14px">Se detectaron múltiples intentos del mismo músculo/lado. Se usa la media como métrica final. El CV% indica variabilidad: ✓ Fiable &lt;5–15% · ~ Moderado · ✗ Variable (especialmente RFD@50ms, que es más sensible al ruido neural)</div>
+    ${sectionsHtml}
+    <div style="margin-top:10px;padding:8px 12px;background:#050a05;border-radius:6px;border-left:3px solid #1a3a1a;font-size:9px;color:#2a5a2a;font-family:'Rajdhani',sans-serif">
+      📚 Umbral de aceptabilidad: CV &lt;10% para Fuerza Máxima (Maffiuletti NA et al., 2016 · Eur J Appl Physiol) · CV &lt;20% para RFD@50ms (Tillin NA et al., 2013 · J Sports Sci) · RFD temprana es inherentemente más variable por su sensibilidad neural.
+    </div>
+  </div>`;
+}
+
 function buildNormativeComparisonQuad(quad, ham) {
   const qR=quad?.R?.fmax, qL=quad?.L?.fmax;
   const hR=ham?.R?.fmax, hL=ham?.L?.fmax;
@@ -772,7 +879,7 @@ function buildNormativeComparisonQuad(quad, ham) {
 }
 
 /* ===== QUAD + HAM PROFILE REPORT ===== */
-function buildQuadHamReport(groups, patient, dateStr) {
+function buildQuadHamReport(groups, patient, dateStr, groupReliability={}) {
   Object.values(activeCharts).forEach(c=>{try{c.destroy()}catch(e){}});
   activeCharts={};
 
@@ -863,6 +970,8 @@ function buildQuadHamReport(groups, patient, dateStr) {
     <div class="sr-card"><div class="sr-ci">⚖️</div><div class="sr-cv">${hqL!=null?hqL.toFixed(2):'—'} / ${hqR!=null?hqR.toFixed(2):'—'}</div><div class="sr-cl">Ratio H:Q<br><span>(Izq / Der)</span></div></div>
     <div class="sr-card"><div class="sr-ci">⏱</div><div class="sr-cv">${avg4('tpeak')??'—'} s</div><div class="sr-cl">Tiempo Pico Promedio<br><span>(Todos los segmentos)</span></div></div>
   </div>
+
+  ${buildReliabilityBlock(groupReliability)}
 
   <!-- SECTION 1: FORCE TABLE -->
   <div class="sr-sec-bar">1. COMPARACIÓN DE FUERZA (N) — CUÁDRICEPS E ISQUIOTIBIALES</div>
@@ -1102,7 +1211,7 @@ function buildQuadHamReport(groups, patient, dateStr) {
 }
 
 /* ===== SHOULDER ROTATOR PROFILE REPORT ===== */
-function buildShoulderRotatorReport(groups, patient, dateStr) {
+function buildShoulderRotatorReport(groups, patient, dateStr, groupReliability={}) {
   Object.values(activeCharts).forEach(c=>{try{c.destroy()}catch(e){}});
   activeCharts={};
 
@@ -1197,6 +1306,8 @@ function buildShoulderRotatorReport(groups, patient, dateStr) {
     <div class="sr-card"><div class="sr-ci">⏱</div><div class="sr-cv">${avg4('tpeak')??'—'} s</div><div class="sr-cl">Tiempo Máx. Fuerza<br><span>(Promedio)</span></div></div>
     <div class="sr-card"><div class="sr-ci">🔄</div><div class="sr-cv">${erirL??'—'} / ${erirR??'—'}</div><div class="sr-cl">Ratio ER:IR<br><span>(Izq / Der)</span></div></div>
   </div>
+
+  ${buildReliabilityBlock(groupReliability)}
 
   <!-- SECTION 1: FORCE TABLE -->
   <div class="sr-sec-bar">1. COMPARACIÓN DE FUERZA (N) ENTRE HOMBRO IZQUIERDO Y DERECHO</div>
