@@ -296,6 +296,19 @@ function buildReport(data, patient) {
     showReport(); return;
   }
 
+  // Knee profile: both QUAD and HAM bilateral detected
+  if(groups.QUAD?.R&&groups.QUAD?.L&&groups.HAM?.R&&groups.HAM?.L){
+    const fullPat={
+      name:patient.name, sport:patient.sport,
+      muscle:'Perfil Cuádriceps + Isquiotibiales Bilateral', injury:patient.injury,
+      prof:patient.prof,
+      profPhoto:patient.profPhoto||(currentUser?getPhoto(currentUser.dni):null),
+      instLogo:null
+    };
+    buildQuadHamReport(groups, fullPat, dateStr);
+    showReport(); return;
+  }
+
   // Shoulder rotator profile: both EXT_ROT and INT_ROT bilateral detected
   if(groups.EXT_ROT?.R&&groups.EXT_ROT?.L&&groups.INT_ROT?.R&&groups.INT_ROT?.L){
     const fullPat={
@@ -695,8 +708,397 @@ function buildNormativeComparison(er, ir) {
 }
 
 function buildNormativeComparisonQuad(quad, ham) {
-  // Placeholder — only fires if quad/ham data present
-  return '';
+  const qR=quad?.R?.fmax, qL=quad?.L?.fmax;
+  const hR=ham?.R?.fmax, hL=ham?.L?.fmax;
+  const hqR=(hR&&qR)?hR/qR:null;
+  const hqL=(hL&&qL)?hL/qL:null;
+
+  function normBar(val, min, max) {
+    if(val==null) return '<span style="color:#555">—</span>';
+    const pct=Math.min(val/max*100,120).toFixed(0);
+    const color=val<min?'#ef4444':val>max?'#f59e0b':'#00c853';
+    const label=val<min?'↓ Bajo norma':val>max?'↑ Sobre norma':'✓ Dentro norma';
+    return `<div style="display:flex;align-items:center;gap:8px">
+      <div style="flex:1;background:#0d1a0d;border-radius:4px;height:10px;overflow:hidden">
+        <div style="width:${Math.min(pct,100)}%;height:100%;background:${color};border-radius:4px"></div>
+      </div>
+      <span style="font-size:10px;color:${color};white-space:nowrap">${label}</span>
+    </div>`;
+  }
+
+  const rows=[
+    {label:'Cuádriceps Derecho (Fmax)', val:qR, ref:'150–500 N', min:150, max:500},
+    {label:'Cuádriceps Izquierdo (Fmax)', val:qL, ref:'150–500 N', min:150, max:500},
+    {label:'Isquiotibiales Derecho (Fmax)', val:hR, ref:'100–350 N', min:100, max:350},
+    {label:'Isquiotibiales Izquierdo (Fmax)', val:hL, ref:'100–350 N', min:100, max:350},
+    {label:'Ratio H:Q Derecho', val:hqR, ref:'≥0.60', min:0.60, max:0.80},
+    {label:'Ratio H:Q Izquierdo', val:hqL, ref:'≥0.60', min:0.60, max:0.80},
+  ];
+
+  const rowsHtml=rows.map(r=>`
+    <tr>
+      <td style="padding:8px 10px;font-size:11px;color:#3a7a3a;font-family:'Rajdhani',sans-serif">${r.label}</td>
+      <td style="padding:8px 10px;font-size:12px;font-weight:700;color:#d0f0d0">${r.val!=null?(Number.isInteger(r.val)?r.val:r.val.toFixed(2)):'—'}</td>
+      <td style="padding:8px 10px;font-size:10px;color:#2a5a2a">${r.ref}</td>
+      <td style="padding:8px 10px;min-width:180px">${normBar(r.val,r.min,r.max)}</td>
+    </tr>`).join('');
+
+  return `<div class="section-divider">Comparativa con Valores Normativos</div>
+  <div class="dcard" style="margin:0 0 16px">
+    <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:#00c853;margin-bottom:12px">
+      📊 TUS VALORES vs POBLACIÓN DE REFERENCIA
+    </div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="border-bottom:1px solid #1a3a1a">
+          <th style="padding:6px 10px;font-size:10px;color:#2a5a2a;text-align:left;font-family:'Rajdhani',sans-serif;letter-spacing:1px">MÉTRICA</th>
+          <th style="padding:6px 10px;font-size:10px;color:#2a5a2a;text-align:left;font-family:'Rajdhani',sans-serif;letter-spacing:1px">VALOR</th>
+          <th style="padding:6px 10px;font-size:10px;color:#2a5a2a;text-align:left;font-family:'Rajdhani',sans-serif;letter-spacing:1px">NORMA</th>
+          <th style="padding:6px 10px;font-size:10px;color:#2a5a2a;text-align:left;font-family:'Rajdhani',sans-serif;letter-spacing:1px">COMPARATIVA</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+    <div style="margin-top:12px;padding:10px;background:#050a05;border-radius:6px;border-left:3px solid #1a3a1a">
+      <div style="font-size:10px;color:#2a5a2a;font-family:'Rajdhani',sans-serif;letter-spacing:1px;margin-bottom:6px">📚 REFERENCIAS NORMATIVAS</div>
+      <div style="font-size:10px;color:#3a6a3a;line-height:1.6">
+        van Dyk N et al. (2016). <em>Am J Sports Med</em>, 44(7):1789–1795 — Meta-análisis H:Q ratio y riesgo de lesión isquiotibial.<br>
+        Croisier JL et al. (2008). <em>Am J Sports Med</em>, 36(2):233–240 — Desequilibrios musculares y prevención de lesiones.<br>
+        Dauty M et al. (2016). <em>Knee</em>, 23(3):478–482 — Dinamometría isométrica cuádriceps e isquiotibiales.<br>
+        <span style="color:#1e4a1e">⚠ Valores normativos varían por edad, sexo, deporte y ángulo de medición.</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ===== QUAD + HAM PROFILE REPORT ===== */
+function buildQuadHamReport(groups, patient, dateStr) {
+  Object.values(activeCharts).forEach(c=>{try{c.destroy()}catch(e){}});
+  activeCharts={};
+
+  const qR=groups.QUAD.R, qL=groups.QUAD.L;
+  const hR=groups.HAM.R, hL=groups.HAM.L;
+  const all=[qR,qL,hR,hL];
+
+  function avg4(key){
+    const ns=all.map(v=>v[key]).filter(x=>x!=null);
+    return ns.length?(ns.reduce((a,b)=>a+b,0)/ns.length).toFixed(1):null;
+  }
+  function diffCell(lv,rv){
+    if(lv==null||rv==null) return '<span style="color:#555">—</span>';
+    const diff=lv-rv;
+    const pct=((Math.abs(diff)/Math.max(lv,rv))*100).toFixed(1);
+    const sign=diff>=0?'+':'';
+    const cls=Math.abs(parseFloat(pct))>10?'sr-diff-alarm':'sr-diff-ok';
+    return `<span class="${cls}">${sign}${diff.toFixed(1)}<br><small>(${sign}${pct}%)</small></span>`;
+  }
+  function ftRow(label,qLv,qRv,hLv,hRv,bold){
+    const cls=bold?' class="sr-bold-row"':'';
+    return `<tr${cls}>
+      <td class="sr-tc">${label}</td>
+      <td class="sr-tv">${n(qLv)}</td><td class="sr-tv">${n(qRv)}</td>
+      <td class="sr-tv sr-ir">${n(hLv)}</td><td class="sr-tv sr-ir">${n(hRv)}</td>
+    </tr>`;
+  }
+
+  const logo=patient.instLogo
+    ?`<img src="${patient.instLogo}" style="height:40px;width:auto" alt="Logo">`
+    :`<img src="${MOVE_LOGO_SRC}" style="height:40px;width:auto" alt="The Move Club">`;
+  const profPh=patient.profPhoto
+    ?`<img src="${patient.profPhoto}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #00c853" alt="">`:'';
+
+  const hqR=(hR.fmax&&qR.fmax)?hR.fmax/qR.fmax:null;
+  const hqL=(hL.fmax&&qL.fmax)?hL.fmax/qL.fmax:null;
+  const qFdef=def(qL.fmax,qR.fmax), hFdef=def(hL.fmax,hR.fmax);
+  const qRdef=def(qL.rfd50,qR.rfd50), hRdef=def(hL.rfd50,hR.rfd50);
+  const maxDef=Math.max(qFdef||0,hFdef||0,qRdef||0,hRdef||0);
+  const alertCls=maxDef>20?'alarm':maxDef>10?'warning':'ok';
+  const alertIcon=maxDef>20?'🚨':maxDef>10?'⚠️':'✅';
+  const alertTitle=maxDef>20?'DÉFICIT BILATERAL SIGNIFICATIVO':maxDef>10?'ASIMETRÍA MODERADA DETECTADA':'PERFIL SIMÉTRICO';
+  const alertSub=`QUAD: Fuerza ${qFdef??'—'}% · RFD ${qRdef??'—'}% · ISQ: Fuerza ${hFdef??'—'}% · RFD ${hRdef??'—'}%`;
+
+  // H:Q status
+  function hqBadge(v){
+    if(v==null) return {cls:'nd',icon:'—',txt:'Sin dato'};
+    if(v<0.50) return {cls:'alarm',icon:'🚨',txt:'RIESGO ELEVADO'};
+    if(v<0.60) return {cls:'warn',icon:'⚠️',txt:'DÉFICIT MODERADO'};
+    return {cls:'ok',icon:'✅',txt:'DENTRO DE RANGO'};
+  }
+  const hqBR=hqBadge(hqR), hqBL=hqBadge(hqL);
+
+  const injHTML=patient.injury
+    ?`<div class="inj-tag has">🩹 ${patient.injury}`
+    :`<div class="inj-tag none">✓ Sin lesiones activas reportadas</div>`;
+
+  document.getElementById('dashBody').innerHTML=`
+
+  <!-- QH HEADER -->
+  <div class="sr-header">
+    <div style="display:flex;align-items:center;gap:14px">${logo}
+      <div>
+        <div class="sr-title">INFORME DE EVALUACIÓN CUÁDRICEPS E ISQUIOTIBIALES</div>
+        <div class="sr-sub">Dinamometría Isométrica · Modo Push · Valkyria Trainer</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">${profPh}
+      <div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:#fff">${patient.name}</div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:10px;color:#3a7a3a;letter-spacing:1px">Deporte: ${patient.sport} · Evaluador: ${patient.prof}</div>
+        ${injHTML}
+        <div style="font-family:'Rajdhani',sans-serif;font-size:10px;color:#2a5a2a;letter-spacing:1px">Fecha: ${dateStr}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALERT -->
+  <div class="alert ${alertCls}">
+    <div class="alert-icon">${alertIcon}</div>
+    <div><div class="alert-title">${alertTitle}</div><div class="alert-sub">${alertSub}</div></div>
+  </div>
+
+  <!-- SUMMARY CARDS -->
+  <div class="sr-cards">
+    <div class="sr-card"><div class="sr-ci">🦵</div><div class="sr-cv">${avg4('fmax')??'—'} N</div><div class="sr-cl">Fuerza Máxima Promedio<br><span>(Ambos músculos, ambos lados)</span></div></div>
+    <div class="sr-card"><div class="sr-ci">⚡</div><div class="sr-cv">${avg4('rfd50')??'—'} N/s</div><div class="sr-cl">RFD@50ms Promedio<br><span>(Todos los segmentos)</span></div></div>
+    <div class="sr-card"><div class="sr-ci">⚖️</div><div class="sr-cv">${hqL!=null?hqL.toFixed(2):'—'} / ${hqR!=null?hqR.toFixed(2):'—'}</div><div class="sr-cl">Ratio H:Q<br><span>(Izq / Der)</span></div></div>
+    <div class="sr-card"><div class="sr-ci">⏱</div><div class="sr-cv">${avg4('tpeak')??'—'} s</div><div class="sr-cl">Tiempo Pico Promedio<br><span>(Todos los segmentos)</span></div></div>
+  </div>
+
+  <!-- SECTION 1: FORCE TABLE -->
+  <div class="sr-sec-bar">1. COMPARACIÓN DE FUERZA (N) — CUÁDRICEPS E ISQUIOTIBIALES</div>
+  <div class="dcard" style="padding:0;overflow:auto">
+    <table class="sr-force-tbl">
+      <thead>
+        <tr>
+          <th rowspan="2" class="sr-var">VARIABLE</th>
+          <th colspan="2" class="sr-th-er">CUÁDRICEPS</th>
+          <th colspan="2" class="sr-th-ir">ISQUIOTIBIALES</th>
+        </tr>
+        <tr>
+          <th class="sr-sub-th">IZQ (N)</th><th class="sr-sub-th">DER (N)</th>
+          <th class="sr-sub-th sr-ir">IZQ (N)</th><th class="sr-sub-th sr-ir">DER (N)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${ftRow('Fuerza a 50ms',qL.f50,qR.f50,hL.f50,hR.f50)}
+        ${ftRow('Fuerza a 100ms',qL.f100,qR.f100,hL.f100,hR.f100)}
+        ${ftRow('Fuerza a 150ms',qL.f150,qR.f150,hL.f150,hR.f150)}
+        ${ftRow('Fuerza a 200ms',qL.f200,qR.f200,hL.f200,hR.f200)}
+        ${ftRow('Fuerza a 250ms',qL.f250,qR.f250,hL.f250,hR.f250)}
+        ${ftRow('FUERZA MÁXIMA (N)',qL.fmax,qR.fmax,hL.fmax,hR.fmax,true)}
+        ${ftRow('FUERZA PROMEDIO (N)',qL.favg,qR.favg,hL.favg,hR.favg,true)}
+        ${ftRow('FUERZA INICIAL (N)',qL.finit,qR.finit,hL.finit,hR.finit)}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SECTION 2 & 3: CHARTS -->
+  <div class="sr-chart-row">
+    <div class="dcard">
+      <div class="dt">2. Perfil de Fuerza (N) por Ventana Temporal</div>
+      <canvas id="qhForceChart" height="180"></canvas>
+    </div>
+    <div class="dcard">
+      <div class="dt">3. Perfil de RFD (N/s) por Ventana Temporal</div>
+      <canvas id="qhRFDChart" height="180"></canvas>
+    </div>
+  </div>
+  <div class="sr-legend">
+    <span><span class="sr-dot" style="background:#4ade80"></span>Cuád Izquierdo</span>
+    <span><span class="sr-dot er-der"></span>Cuád Derecho</span>
+    <span><span class="sr-dot" style="background:#818cf8"></span>Isq Izquierdo</span>
+    <span><span class="sr-dot" style="background:#6366f1"></span>Isq Derecho</span>
+  </div>
+
+  <!-- SECTION 4: BILATERAL COMPARISON -->
+  <div class="sr-sec-bar">4. COMPARATIVA GLOBAL BILATERAL</div>
+  <div class="sr-global-row">
+    <div class="dcard">
+      <div class="dt" style="color:#00c853">CUÁDRICEPS</div>
+      <table class="sr-diff-tbl">
+        <thead><tr><th>VARIABLE</th><th>IZQUIERDO</th><th>DERECHO</th><th>DIFERENCIA</th></tr></thead>
+        <tbody>
+          <tr><td>Fuerza Máxima (N)</td><td>${n(qL.fmax)}</td><td>${n(qR.fmax)}</td><td>${diffCell(qL.fmax,qR.fmax)}</td></tr>
+          <tr><td>Fuerza Promedio (N)</td><td>${n(qL.favg)}</td><td>${n(qR.favg)}</td><td>${diffCell(qL.favg,qR.favg)}</td></tr>
+          <tr><td>RFD @ 50ms (N/s)</td><td>${n(qL.rfd50)}</td><td>${n(qR.rfd50)}</td><td>${diffCell(qL.rfd50,qR.rfd50)}</td></tr>
+          <tr><td>Tiempo Pico (s)</td><td>${n(qL.tpeak)}</td><td>${n(qR.tpeak)}</td><td>${diffCell(qL.tpeak,qR.tpeak)}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="dcard">
+      <div class="dt" style="color:#818cf8">ISQUIOTIBIALES</div>
+      <table class="sr-diff-tbl">
+        <thead><tr><th>VARIABLE</th><th>IZQUIERDO</th><th>DERECHO</th><th>DIFERENCIA</th></tr></thead>
+        <tbody>
+          <tr><td>Fuerza Máxima (N)</td><td>${n(hL.fmax)}</td><td>${n(hR.fmax)}</td><td>${diffCell(hL.fmax,hR.fmax)}</td></tr>
+          <tr><td>Fuerza Promedio (N)</td><td>${n(hL.favg)}</td><td>${n(hR.favg)}</td><td>${diffCell(hL.favg,hR.favg)}</td></tr>
+          <tr><td>RFD @ 50ms (N/s)</td><td>${n(hL.rfd50)}</td><td>${n(hR.rfd50)}</td><td>${diffCell(hL.rfd50,hR.rfd50)}</td></tr>
+          <tr><td>Tiempo Pico (s)</td><td>${n(hL.tpeak)}</td><td>${n(hR.tpeak)}</td><td>${diffCell(hL.tpeak,hR.tpeak)}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SECTION 5: RFD SUMMARY -->
+  <div class="sr-sec-bar">5. RESUMEN DE RFD (N/s) — TODAS LAS VENTANAS TEMPORALES</div>
+  <div class="dcard" style="padding:0;overflow:auto">
+    <table class="sr-force-tbl">
+      <thead>
+        <tr>
+          <th rowspan="2" class="sr-var">VENTANA</th>
+          <th colspan="2" class="sr-th-er">CUÁDRICEPS (N/s)</th>
+          <th colspan="2" class="sr-th-ir">ISQUIOTIBIALES (N/s)</th>
+        </tr>
+        <tr>
+          <th class="sr-sub-th">IZQ</th><th class="sr-sub-th">DER</th>
+          <th class="sr-sub-th sr-ir">IZQ</th><th class="sr-sub-th sr-ir">DER</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${ftRow('RFD @ 50ms',qL.rfd50,qR.rfd50,hL.rfd50,hR.rfd50,true)}
+        ${ftRow('RFD @ 100ms',qL.rfd100,qR.rfd100,hL.rfd100,hR.rfd100)}
+        ${ftRow('RFD @ 150ms',qL.rfd150,qR.rfd150,hL.rfd150,hR.rfd150)}
+        ${ftRow('RFD @ 250ms',qL.rfd250,qR.rfd250,hL.rfd250,hR.rfd250)}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SECTION 6: H:Q RATIO CARDS -->
+  <div class="sr-sec-bar">6. RATIO ISQUIOTIBIALES : CUÁDRICEPS (H:Q)</div>
+  <div class="ratio-section">
+    <div class="ratio-section-title">⚖️ &nbsp; RATIO H:Q — INDICADOR CLÍNICO DE BALANCE MUSCULAR</div>
+    <div class="ratio-grid">
+      <div class="ratio-card">
+        <div class="ratio-card-label">Lado Derecho</div>
+        <div class="ratio-value-row"><div class="ratio-value ${hqBR.cls}">${hqR!=null?hqR.toFixed(2):'—'}</div><div class="ratio-unit">H:Q</div></div>
+        <div class="ratio-band"><div class="ratio-band-fill ${hqBR.cls}" style="width:${hqR!=null?Math.min(hqR/0.80*100,100).toFixed(0):0}%"></div></div>
+        <div class="ratio-status-chip ${hqBR.cls}">${hqBR.txt}</div>
+        <div class="ratio-normal-range">Normal: ≥0.60 · Alarma: &lt;0.50</div>
+        ${hqR!=null?`<div style="margin-top:8px;font-size:10px;color:#4a7a4a">ISQ ${n(hR.fmax)} N / CUAD ${n(qR.fmax)} N</div>`:''}
+      </div>
+      <div class="ratio-card">
+        <div class="ratio-card-label">Lado Izquierdo</div>
+        <div class="ratio-value-row"><div class="ratio-value ${hqBL.cls}">${hqL!=null?hqL.toFixed(2):'—'}</div><div class="ratio-unit">H:Q</div></div>
+        <div class="ratio-band"><div class="ratio-band-fill ${hqBL.cls}" style="width:${hqL!=null?Math.min(hqL/0.80*100,100).toFixed(0):0}%"></div></div>
+        <div class="ratio-status-chip ${hqBL.cls}">${hqBL.txt}</div>
+        <div class="ratio-normal-range">Normal: ≥0.60 · Alarma: &lt;0.50</div>
+        ${hqL!=null?`<div style="margin-top:8px;font-size:10px;color:#4a7a4a">ISQ ${n(hL.fmax)} N / CUAD ${n(qL.fmax)} N</div>`:''}
+      </div>
+    </div>
+    <div class="ratio-ref-block">
+      <div class="ratio-ref-title">📚 Fundamento científico</div>
+      <div class="ratio-ref-text">${CLINICAL.HQ.refs}</div>
+      <div class="ratio-note" style="margin-top:8px">⛑ ${CLINICAL.HQ.note}</div>
+    </div>
+  </div>
+
+  <!-- SECTION 7: MISC DATA -->
+  <div class="sr-misc-row">
+    <div class="dcard sr-misc-card">
+      <div style="font-size:24px">⏱</div>
+      <div class="sr-misc-lbl">TIEMPO MÁXIMO DE FUERZA (s)</div>
+      <div class="sr-misc-val">Izq QUAD: <strong>${n(qL.tpeak)??'—'}</strong> · Der QUAD: <strong>${n(qR.tpeak)??'—'}</strong></div>
+      <div class="sr-misc-val">Izq ISQ: <strong>${n(hL.tpeak)??'—'}</strong> · Der ISQ: <strong>${n(hR.tpeak)??'—'}</strong></div>
+    </div>
+    <div class="dcard sr-misc-card">
+      <div style="font-size:24px">📊</div>
+      <div class="sr-misc-lbl">FUERZA INICIAL (N)</div>
+      <div class="sr-misc-val">Izq QUAD: <strong>${n(qL.finit)??'—'}</strong> · Der QUAD: <strong>${n(qR.finit)??'—'}</strong></div>
+      <div class="sr-misc-val">Izq ISQ: <strong>${n(hL.finit)??'—'}</strong> · Der ISQ: <strong>${n(hR.finit)??'—'}</strong></div>
+    </div>
+    <div class="dcard sr-misc-card">
+      <div style="font-size:24px">⚖️</div>
+      <div class="sr-misc-lbl">RATIO H:Q (Fmax)</div>
+      <div class="sr-misc-val">Izquierdo: <strong>${hqL!=null?hqL.toFixed(2):'—'}</strong> · Derecho: <strong>${hqR!=null?hqR.toFixed(2):'—'}</strong></div>
+      <div class="sr-misc-val"><small style="color:${(hqR&&hqR<0.60)?'#ef4444':'#00c853'}">${(hqR&&hqR<0.60)?'⚠ Déficit H:Q — Revisar balance':'✓ H:Q dentro de rango normal (≥0.60)'}</small></div>
+    </div>
+  </div>
+
+  <!-- SECTIONS 8 & 9: INTERPRETATION + REFS -->
+  <div class="sr-interp-row">
+    <div class="dcard" style="flex:1.2">
+      <div class="dt">8. Interpretación Basada en Evidencia Científica</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
+        <div class="sr-interp-item">
+          <div style="font-size:18px;flex-shrink:0">${(qFdef!=null&&qFdef>15)?'⚠️':'✅'}</div>
+          <div><div class="sr-interp-label">SIMETRÍA CUÁDRICEPS</div><div class="sr-interp-text">${(qFdef!=null&&qFdef>15)?`Déficit bilateral de cuádriceps del ${qFdef}% supera el umbral del 15%. El lado ${(qL.fmax||0)>=(qR.fmax||0)?'izquierdo':'derecho'} es dominante.`:`Cuádriceps presenta perfil simétrico (déficit ${qFdef??'—'}%). Dentro de rangos normales.`}</div></div>
+        </div>
+        <div class="sr-interp-item">
+          <div style="font-size:18px;flex-shrink:0">${(hFdef!=null&&hFdef>15)?'⚠️':'✅'}</div>
+          <div><div class="sr-interp-label">SIMETRÍA ISQUIOTIBIALES</div><div class="sr-interp-text">${(hFdef!=null&&hFdef>15)?`Déficit bilateral de isquiotibiales del ${hFdef}% supera el umbral del 15%. Considerar riesgo aumentado de lesión isquiotibial.`:`Isquiotibiales presenta perfil simétrico (déficit ${hFdef??'—'}%). Dentro de rangos normales.`}</div></div>
+        </div>
+        <div class="sr-interp-item">
+          <div style="font-size:18px;flex-shrink:0">${(hqR!=null&&hqR<0.60)||(hqL!=null&&hqL<0.60)?'🚨':'✅'}</div>
+          <div><div class="sr-interp-label">RATIO H:Q</div><div class="sr-interp-text">${(hqR!=null&&hqR<0.60)||(hqL!=null&&hqL<0.60)?'Ratio H:Q por debajo del umbral mínimo de 0.60. La literatura indica mayor riesgo de lesión de LCA e isquiotibiales con ratios disminuidos (van Dyk N et al., 2016).':'Ratio H:Q dentro de parámetros normales (≥0.60). Balance flexor-extensor adecuado según evidencia disponible.'}</div></div>
+        </div>
+        <div class="sr-interp-item">
+          <div style="font-size:18px;flex-shrink:0">${(qRdef!=null&&qRdef>20)||(hRdef!=null&&hRdef>20)?'⚡':'✅'}</div>
+          <div><div class="sr-interp-label">PERFIL NEURAL (RFD)</div><div class="sr-interp-text">${(qRdef!=null&&qRdef>20)||(hRdef!=null&&hRdef>20)?`Asimetría en la Tasa de Desarrollo de Fuerza detectada. QUAD: ${qRdef??'—'}% · ISQ: ${hRdef??'—'}%. Asimetrías >20% en RFD@50ms sugieren disfunción en el reclutamiento neural temprano.`:'RFD simétrico entre ambos lados para cuádriceps e isquiotibiales. Eficiencia neural preservada.'}</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="dcard" style="flex:1">
+      <div class="dt">9. Respaldo Científico</div>
+      <div class="sr-refs">
+        <div class="sr-ref"><span class="sr-rnum">1</span><div>van Dyk N et al. (2016). <em>Am J Sports Med</em>, 44(7) — Meta-análisis 13 estudios, n=8.319. <strong>H:Q ratio como predictor de lesión isquiotibial.</strong></div></div>
+        <div class="sr-ref"><span class="sr-rnum">2</span><div>Croisier JL et al. (2008). <em>Am J Sports Med</em>, 36(2):233–240 — Desequilibrios musculares bilaterales y prevención de lesiones en futbolistas.</div></div>
+        <div class="sr-ref"><span class="sr-rnum">3</span><div>Dauty M et al. (2016). <em>Knee</em>, 23(3):478–482 — Valores de referencia en dinamometría isométrica de cuádriceps e isquiotibiales.</div></div>
+        <div class="sr-ref"><span class="sr-rnum">4</span><div>Maffiuletti NA et al. (2016). <em>Eur J Appl Physiol</em> — TDF como marcador de función neuromuscular. <strong>RFD@50ms indicador de dominancia neural.</strong></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="rpt-footer">
+    <div style="display:flex;align-items:center;gap:12px">
+      ${patient.instLogo
+        ?`<img src="${patient.instLogo}" style="max-height:32px;object-fit:contain" alt="">`
+        :`<img src="${MOVE_LOGO_SRC}" style="height:28px;width:auto;opacity:.6" alt="The Move Club">`}
+      <div class="rf-l"><strong>${patient.prof}</strong>${dateStr}</div>
+    </div>
+    <div class="rf-r">
+      Dinamómetro Isométrico · Valkyria Trainer · Unidades: N / N/s / s<br>
+      Este informe se basa únicamente en los datos proporcionados en las imágenes suministradas.
+    </div>
+  </div>`;
+
+  setTimeout(()=>{
+    const SC={ticks:{color:'#2a6a2a',font:{family:'Rajdhani,sans-serif',size:9}},grid:{color:'#0c170c'}};
+    const leg={labels:{color:'#3a7a3a',font:{family:'Rajdhani,sans-serif',size:9},boxWidth:10,padding:10}};
+    const cQl='#4ade80', cQr='#00c853', cHl='#818cf8', cHr='#6366f1';
+
+    const fcCtx=document.getElementById('qhForceChart')?.getContext('2d');
+    if(fcCtx){
+      activeCharts.qhF=new Chart(fcCtx,{type:'line',data:{
+        labels:['50ms','100ms','150ms','200ms','250ms','Máx'],
+        datasets:[
+          {label:'Cuád Izq',data:[qL.f50,qL.f100,qL.f150,qL.f200,qL.f250,qL.fmax],borderColor:cQl,backgroundColor:cQl+'18',borderWidth:2,borderDash:[5,3],pointRadius:4,tension:0.3,spanGaps:true},
+          {label:'Cuád Der',data:[qR.f50,qR.f100,qR.f150,qR.f200,qR.f250,qR.fmax],borderColor:cQr,backgroundColor:cQr+'18',borderWidth:2,pointRadius:4,tension:0.3,spanGaps:true},
+          {label:'Isq Izq',data:[hL.f50,hL.f100,hL.f150,hL.f200,hL.f250,hL.fmax],borderColor:cHl,backgroundColor:cHl+'18',borderWidth:2,borderDash:[5,3],pointRadius:4,tension:0.3,spanGaps:true},
+          {label:'Isq Der',data:[hR.f50,hR.f100,hR.f150,hR.f200,hR.f250,hR.fmax],borderColor:cHr,backgroundColor:cHr+'18',borderWidth:2,pointRadius:4,tension:0.3,spanGaps:true},
+        ]},
+        options:{responsive:true,maintainAspectRatio:true,animation:{duration:800},
+          plugins:{legend:leg,tooltip:{callbacks:{label:c=>`${c.parsed.y?.toFixed(1)} N`}}},
+          scales:{x:SC,y:{...SC,beginAtZero:true,title:{display:true,text:'Fuerza (N)',color:'#2a6a2a',font:{size:9}}}}}
+      });
+    }
+
+    const rcCtx=document.getElementById('qhRFDChart')?.getContext('2d');
+    if(rcCtx){
+      activeCharts.qhR=new Chart(rcCtx,{type:'line',data:{
+        labels:['50ms','100ms','150ms','250ms'],
+        datasets:[
+          {label:'Cuád Izq',data:[qL.rfd50,qL.rfd100,qL.rfd150,qL.rfd250],borderColor:cQl,borderWidth:2,borderDash:[5,3],pointRadius:4,tension:0.3,spanGaps:true},
+          {label:'Cuád Der',data:[qR.rfd50,qR.rfd100,qR.rfd150,qR.rfd250],borderColor:cQr,borderWidth:2,pointRadius:4,tension:0.3,spanGaps:true},
+          {label:'Isq Izq',data:[hL.rfd50,hL.rfd100,hL.rfd150,hL.rfd250],borderColor:cHl,borderWidth:2,borderDash:[5,3],pointRadius:4,tension:0.3,spanGaps:true},
+          {label:'Isq Der',data:[hR.rfd50,hR.rfd100,hR.rfd150,hR.rfd250],borderColor:cHr,borderWidth:2,pointRadius:4,tension:0.3,spanGaps:true},
+        ]},
+        options:{responsive:true,maintainAspectRatio:true,animation:{duration:800},
+          plugins:{legend:leg,tooltip:{callbacks:{label:c=>`${c.parsed.y?.toFixed(2)} N/s`}}},
+          scales:{x:SC,y:{...SC,beginAtZero:true,title:{display:true,text:'RFD (N/s)',color:'#2a6a2a',font:{size:9}}}}}
+      });
+    }
+  }, 200);
 }
 
 /* ===== SHOULDER ROTATOR PROFILE REPORT ===== */
