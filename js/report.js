@@ -289,19 +289,91 @@ function buildReport(data, patient) {
 
   // Merge multiple attempts: compute mean, SD, CV% per metric
   const METRIC_KEYS=['fmax','favg','finit','tpeak','f50','f100','f150','f200','f250','rfd50','rfd100','rfd150','rfd250'];
+
+  // Outlier thresholds per metric type (% deviation from mean)
+  // Fmax/Favg/F@Xms: 15% — Gam 2024, Thomas 2017
+  // RFD@50ms: 35% — Dos'Santos 2019 (CV natural 18-24%)
+  // RFD@100-250ms: 25% — Suarez 2022
+  const OUTLIER_THRESH={
+    fmax:15, favg:15, finit:15, tpeak:20,
+    f50:15, f100:15, f150:15, f200:15, f250:15,
+    rfd50:35, rfd100:25, rfd150:25, rfd250:25
+  };
+  // CV thresholds to declare metric INVALID after outlier removal
+  const CV_VALID={
+    fmax:10, favg:10, finit:15, tpeak:20,
+    f50:12, f100:12, f150:12, f200:12, f250:12,
+    rfd50:35, rfd100:25, rfd150:25, rfd250:25
+  };
+
+  function calcMean(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+  function calcSD(arr,mean){ return arr.length>1?Math.sqrt(arr.reduce((s,v)=>s+(v-mean)**2,0)/(arr.length-1)):0; }
+  function calcCV(sd,mean){ return mean!==0?(sd/mean)*100:0; }
+
   function mergeAttempts(attempts){
     if(!attempts||!attempts.length) return null;
     if(attempts.length===1) return {metrics:attempts[0], reliability:null};
+
     const merged={}, reliability={};
+
     METRIC_KEYS.forEach(key=>{
-      const vals=attempts.map(a=>a[key]).filter(v=>v!=null&&!isNaN(v));
-      if(!vals.length){merged[key]=null;return;}
-      const mean=vals.reduce((a,b)=>a+b,0)/vals.length;
-      const sd=vals.length>1?Math.sqrt(vals.reduce((s,v)=>s+(v-mean)**2,0)/(vals.length-1)):0;
-      const cv=mean!==0?(sd/mean)*100:0;
-      merged[key]=+mean.toFixed(2);
-      reliability[key]={n:vals.length, mean:+mean.toFixed(2), sd:+sd.toFixed(2), cv:+cv.toFixed(1), vals};
+      const allVals=attempts.map(a=>a[key]).filter(v=>v!=null&&!isNaN(v));
+      if(!allVals.length){merged[key]=null;return;}
+      if(allVals.length===1){merged[key]=allVals[0];return;}
+
+      const thresh=OUTLIER_THRESH[key]||15;
+      const cvThresh=CV_VALID[key]||10;
+
+      // --- STEP 1: find outlier (only if 3+ attempts) ---
+      let usedVals=allVals;
+      let discardedIdx=null;
+      let discardReason=null;
+
+      if(allVals.length>=3){
+        const m0=calcMean(allVals);
+        // find the value most deviated from mean
+        let maxDev=0, maxIdx=0;
+        allVals.forEach((v,i)=>{ const d=Math.abs(v-m0)/m0*100; if(d>maxDev){maxDev=d;maxIdx=i;} });
+        if(maxDev>thresh){
+          // tentatively remove it
+          const candidate=allVals.filter((_,i)=>i!==maxIdx);
+          const m1=calcMean(candidate);
+          const sd1=calcSD(candidate,m1);
+          const cv1=calcCV(sd1,m1);
+          // --- STEP 2: are the remaining 2 valid? ---
+          if(cv1<=cvThresh){
+            usedVals=candidate;
+            discardedIdx=maxIdx;
+            discardReason=`Difiere ${maxDev.toFixed(1)}% de la media (umbral: ${thresh}%) · CV post-descarte: ${cv1.toFixed(1)}%`;
+          } else {
+            // outlier found but remaining 2 still bad — keep all 3, mark as dispersed
+            discardReason=null; // will be caught by STEP 3
+          }
+        }
+      }
+
+      // --- STEP 3: final CV check ---
+      const finalMean=calcMean(usedVals);
+      const finalSD=calcSD(usedVals,finalMean);
+      const finalCV=calcCV(finalSD,finalMean);
+      const isValid=finalCV<=cvThresh;
+
+      merged[key]=+finalMean.toFixed(2);
+      reliability[key]={
+        n:allVals.length,
+        nUsed:usedVals.length,
+        mean:+finalMean.toFixed(2),
+        sd:+finalSD.toFixed(2),
+        cv:+finalCV.toFixed(1),
+        vals:allVals,
+        usedVals,
+        discardedIdx,         // index in allVals of discarded attempt (null = none)
+        discardReason,        // text reason for discard
+        isValid,              // false = metric not reliable for clinical decision
+        allDispersed: !isValid && discardedIdx===null && allVals.length>=3
+      };
     });
+
     return {metrics:merged, reliability};
   }
 
@@ -749,22 +821,32 @@ function buildReliabilityBlock(groupReliability) {
     rfd50:'RFD @ 50ms (N/s)', rfd100:'RFD @ 100ms (N/s)',
     rfd150:'RFD @ 150ms (N/s)', rfd250:'RFD @ 250ms (N/s)'
   };
-  // CV thresholds from literature (Maffiuletti 2016, VALD Health)
-  // Force metrics: <5% excellent, 5-10% acceptable, >10% poor
-  // RFD metrics: <10% excellent, 10-20% acceptable, >20% poor (more variable by nature)
   const CV_THRESH={
     fmax:{ok:5,warn:10}, favg:{ok:5,warn:10}, finit:{ok:8,warn:15}, tpeak:{ok:10,warn:20},
-    rfd50:{ok:15,warn:25}, rfd100:{ok:12,warn:22}, rfd150:{ok:12,warn:22}, rfd250:{ok:10,warn:20}
+    rfd50:{ok:15,warn:35}, rfd100:{ok:12,warn:25}, rfd150:{ok:12,warn:25}, rfd250:{ok:10,warn:25}
   };
 
-  function cvChip(key, cv) {
+  function statusChip(key, v) {
+    if(!v.isValid && v.allDispersed) return '<span style="background:#7f1d1d;color:#fca5a5;border:1px solid #ef4444;border-radius:4px;padding:2px 7px;font-size:9px;font-family:Rajdhani,sans-serif;font-weight:700">⛔ NO VÁLIDO — Repetir</span>';
+    if(!v.isValid) return '<span style="background:#ef444422;color:#ef4444;border:1px solid #ef444444;border-radius:4px;padding:2px 7px;font-size:9px;font-family:Rajdhani,sans-serif;font-weight:700">✗ VARIABLE</span>';
     const t=CV_THRESH[key]||{ok:10,warn:20};
-    if(cv<=t.ok) return `<span style="background:#00c85322;color:#00c853;border:1px solid #00c85344;border-radius:4px;padding:2px 7px;font-size:9px;font-family:'Rajdhani',sans-serif;font-weight:700">✓ FIABLE (${cv}%)</span>`;
-    if(cv<=t.warn) return `<span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;border-radius:4px;padding:2px 7px;font-size:9px;font-family:'Rajdhani',sans-serif;font-weight:700">~ MODERADO (${cv}%)</span>`;
-    return `<span style="background:#ef444422;color:#ef4444;border:1px solid #ef444444;border-radius:4px;padding:2px 7px;font-size:9px;font-family:'Rajdhani',sans-serif;font-weight:700">✗ VARIABLE (${cv}%)</span>`;
+    if(v.cv<=t.ok) return `<span style="background:#00c85322;color:#00c853;border:1px solid #00c85344;border-radius:4px;padding:2px 7px;font-size:9px;font-family:Rajdhani,sans-serif;font-weight:700">✓ FIABLE (${v.cv}%)</span>`;
+    return `<span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;border-radius:4px;padding:2px 7px;font-size:9px;font-family:Rajdhani,sans-serif;font-weight:700">~ MODERADO (${v.cv}%)</span>`;
+  }
+
+  function attemptsHtml(v) {
+    if(!v.vals) return '—';
+    return v.vals.map((val,i)=>{
+      const isDiscard=v.discardedIdx===i;
+      const isUsed=v.usedVals&&v.usedVals.includes(val)&&!isDiscard;
+      if(isDiscard) return `<span title="${v.discardReason||'Descartado'}" style="background:#7f1d1d;color:#fca5a5;border-radius:3px;padding:1px 5px;font-size:10px;text-decoration:line-through;cursor:help">${val} ❌</span>`;
+      return `<span style="color:${isUsed?'#86efac':'#6b7280'};font-size:10px">${val}</span>`;
+    }).join(' <span style="color:#1a3a1a">·</span> ');
   }
 
   let sectionsHtml='';
+  let hasInvalid=false;
+
   Object.entries(groupReliability).forEach(([muscKey, relData])=>{
     const muscLabel=MUSCLE_LABELS[muscKey]||muscKey;
     ['R','L'].forEach(side=>{
@@ -772,26 +854,41 @@ function buildReliabilityBlock(groupReliability) {
       const n=relData[side==='R'?'nR':'nL'];
       if(!rel||n<2) return;
       const sideLabel=side==='R'?'Derecho':'Izquierdo';
+
+      // check if any metric was discarded or invalid
+      const anyDiscard=Object.values(rel).some(v=>v&&v.discardedIdx!=null);
+      const anyInvalid=Object.values(rel).some(v=>v&&!v.isValid);
+      if(anyInvalid) hasInvalid=true;
+
       const rows=Object.entries(rel).filter(([k,v])=>LABEL_MAP[k]&&v).map(([key,v])=>{
-        return `<tr>
-          <td style="padding:6px 10px;font-size:11px;color:#3a7a3a;font-family:'Rajdhani',sans-serif">${LABEL_MAP[key]}</td>
-          <td style="padding:6px 10px;font-size:11px;font-weight:700;color:#d0f0d0;text-align:center">${v.mean}</td>
+        const rowBg=!v.isValid&&v.allDispersed?'background:#1a0505;':v.discardedIdx!=null?'background:#0d1a05;':'';        return `<tr style="${rowBg}">
+          <td style="padding:6px 10px;font-size:11px;color:#3a7a3a;font-family:Rajdhani,sans-serif">${LABEL_MAP[key]}</td>
+          <td style="padding:6px 10px;font-size:12px;font-weight:700;color:${v.isValid?'#d0f0d0':'#fca5a5'};text-align:center">${v.mean}</td>
           <td style="padding:6px 10px;font-size:11px;color:#8ab8a8;text-align:center">± ${v.sd}</td>
-          <td style="padding:6px 8px;text-align:center">${cvChip(key,v.cv)}</td>
-          <td style="padding:6px 10px;font-size:9px;color:#2a5a2a;text-align:center">${v.vals.join(' / ')}</td>
-        </tr>`;
+          <td style="padding:6px 8px;text-align:center">${statusChip(key,v)}</td>
+          <td style="padding:6px 10px;text-align:left">${attemptsHtml(v)}</td>
+        </tr>
+        ${v.discardedIdx!=null?`<tr><td colspan="5" style="padding:2px 10px 8px;font-size:9px;color:#f59e0b;font-style:italic">⚠ T${v.discardedIdx+1} descartado: ${v.discardReason} · Media calculada con ${v.nUsed} intentos válidos</td></tr>`:''}
+        ${v.allDispersed?`<tr><td colspan="5" style="padding:2px 10px 8px;font-size:9px;color:#fca5a5;font-style:italic">⛔ Alta dispersión en los 3 intentos (CV ${v.cv}%). No se puede identificar un outlier único. Dato NO VÁLIDO para decisión clínica — se recomienda repetir la evaluación.</td></tr>`:''}`;
       }).join('');
       if(!rows) return;
+
+      const headerColor=anyInvalid?'#ef4444':anyDiscard?'#f59e0b':'#00c853';
+      const headerIcon=anyInvalid?'⛔':anyDiscard?'⚠':'✓';
       sectionsHtml+=`
-      <div style="margin-bottom:16px">
-        <div style="font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#00c853;margin-bottom:8px">${muscLabel} — ${sideLabel} (${n} intentos)</div>
+      <div style="margin-bottom:20px">
+        <div style="font-family:Rajdhani,sans-serif;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:${headerColor};margin-bottom:8px;display:flex;align-items:center;gap:6px">
+          ${headerIcon} ${muscLabel} — ${sideLabel} · ${n} intentos
+          ${anyDiscard?'<span style="font-size:9px;background:#f59e0b22;color:#f59e0b;border-radius:3px;padding:1px 6px;border:1px solid #f59e0b44">1 DESCARTADO</span>':''}
+          ${anyInvalid&&!anyDiscard?'<span style="font-size:9px;background:#ef444422;color:#ef4444;border-radius:3px;padding:1px 6px;border:1px solid #ef444444">ALTA VARIABILIDAD</span>':''}
+        </div>
         <table style="width:100%;border-collapse:collapse">
           <thead><tr style="border-bottom:1px solid #1a3a1a">
-            <th style="padding:5px 10px;font-size:10px;color:#2a5a2a;text-align:left;font-family:'Rajdhani',sans-serif">MÉTRICA</th>
-            <th style="padding:5px 10px;font-size:10px;color:#2a5a2a;font-family:'Rajdhani',sans-serif">MEDIA</th>
-            <th style="padding:5px 10px;font-size:10px;color:#2a5a2a;font-family:'Rajdhani',sans-serif">DS</th>
-            <th style="padding:5px 10px;font-size:10px;color:#2a5a2a;font-family:'Rajdhani',sans-serif">CV%</th>
-            <th style="padding:5px 10px;font-size:10px;color:#2a5a2a;font-family:'Rajdhani',sans-serif">INTENTOS</th>
+            <th style="padding:5px 10px;font-size:10px;color:#2a5a2a;text-align:left;font-family:Rajdhani,sans-serif">MÉTRICA</th>
+            <th style="padding:5px 10px;font-size:10px;color:#2a5a2a;font-family:Rajdhani,sans-serif">MEDIA FINAL</th>
+            <th style="padding:5px 10px;font-size:10px;color:#2a5a2a;font-family:Rajdhani,sans-serif">DS</th>
+            <th style="padding:5px 10px;font-size:10px;color:#2a5a2a;font-family:Rajdhani,sans-serif">ESTADO</th>
+            <th style="padding:5px 10px;font-size:10px;color:#2a5a2a;font-family:Rajdhani,sans-serif">INTENTOS (T1 · T2 · T3)</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
@@ -801,15 +898,23 @@ function buildReliabilityBlock(groupReliability) {
 
   if(!sectionsHtml) return '';
 
-  return `<div class="section-divider">Fiabilidad de los Intentos — Media ± DS · CV%</div>
+  const globalAlert=hasInvalid?`<div style="background:#7f1d1d33;border:1px solid #ef4444;border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:10px;color:#fca5a5;font-family:Rajdhani,sans-serif">
+    <strong>⛔ ATENCIÓN:</strong> Una o más métricas presentan alta variabilidad intra-sesión que no permite identificar un outlier único. Los valores marcados en rojo NO deben usarse para decisiones clínicas. Se recomienda repetir esos intentos con descanso adecuado (≥2 min entre tomas) y correcta motivación verbal.
+  </div>`:'';
+
+  return `<div class="section-divider">Análisis de Fiabilidad Intra-Sesión</div>
   <div class="dcard" style="margin:0 0 16px">
-    <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:#00c853;margin-bottom:4px">
-      📐 ANÁLISIS DE FIABILIDAD ENTRE INTENTOS
+    <div style="font-family:Rajdhani,sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:#00c853;margin-bottom:4px">
+      📐 CONTROL DE CALIDAD — SELECCIÓN DE INTENTOS
     </div>
-    <div style="font-size:10px;color:#2a5a2a;margin-bottom:14px">Se detectaron múltiples intentos del mismo músculo/lado. Se usa la media como métrica final. El CV% indica variabilidad: ✓ Fiable &lt;5–15% · ~ Moderado · ✗ Variable (especialmente RFD@50ms, que es más sensible al ruido neural)</div>
+    <div style="font-size:10px;color:#2a5a2a;margin-bottom:12px">
+      Algoritmo basado en evidencia: <strong>Paso 1</strong> — Outlier si difiere &gt;15% Fmax / &gt;25% RFD de la media → descartar si los 2 restantes tienen CV aceptable · <strong>Paso 2</strong> — Validar CV post-descarte · <strong>Paso 3</strong> — Si los 3 son todos dispersos → métrica NO VÁLIDA.<br>
+      <em>Dos'Santos et al. 2019 (IJSPP) · Gam et al. 2024 (Clin Physiol) · Thomas et al. 2017 (Sports Basel) · Suarez et al. 2022 (JSCR)</em>
+    </div>
+    ${globalAlert}
     ${sectionsHtml}
-    <div style="margin-top:10px;padding:8px 12px;background:#050a05;border-radius:6px;border-left:3px solid #1a3a1a;font-size:9px;color:#2a5a2a;font-family:'Rajdhani',sans-serif">
-      📚 Umbral de aceptabilidad: CV &lt;10% para Fuerza Máxima (Maffiuletti NA et al., 2016 · Eur J Appl Physiol) · CV &lt;20% para RFD@50ms (Tillin NA et al., 2013 · J Sports Sci) · RFD temprana es inherentemente más variable por su sensibilidad neural.
+    <div style="margin-top:10px;padding:8px 12px;background:#050a05;border-radius:6px;border-left:3px solid #1a3a1a;font-size:9px;color:#2a5a2a;font-family:Rajdhani,sans-serif">
+      📚 Umbrales: Fmax CV &lt;10% aceptable · RFD@50ms CV &lt;35% aceptable (variabilidad neural inherente) · RFD@100-250ms CV &lt;25% · Dos'Santos T et al. (2019) doi:10.1123/ijspp.2019-2015-0222 · Gam S et al. (2024) doi:10.1111/cpf.12876
     </div>
   </div>`;
 }
