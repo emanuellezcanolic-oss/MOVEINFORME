@@ -1,10 +1,11 @@
-// MOVE Informe — Groq API (Llama 4 Scout, batched)
+// MOVE Informe — Groq API (visión, con modelos de respaldo)
 
 const GROQ_MODELS = [
   'qwen/qwen3.8-27b',
   'qwen/qwen3.6-27b',
   'meta-llama/llama-4-maverick-17b-128e-instruct'
 ];
+let groqModelIdx = 0;
 
 /* ===== CLAUDE API CALL — MULTI-IMAGE (BATCHED 2x) ===== */
 
@@ -58,16 +59,19 @@ Respond ONLY with valid JSON matching this structure (replace ALL placeholder va
   ];
 
   const body = {
-    model: GROQ_MODELS[0],
-    max_tokens: 2048,
+    model: GROQ_MODELS[groqModelIdx],
+    max_tokens: 4096,
     temperature: 0,
     response_format: { type: 'json_object' },
     messages: [{ role: 'user', content: msgContent }]
   };
 
   let res, errBody, msg;
+  let mi = groqModelIdx;
+  let useReasoningFmt = true;
   while (true) {
-    body.model = GROQ_MODELS[0];
+    body.model = GROQ_MODELS[mi];
+    if (useReasoningFmt && body.model.startsWith('qwen/')) body.reasoning_format = 'hidden'; else delete body.reasoning_format;
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 45000);
     try {
@@ -83,35 +87,41 @@ Respond ONLY with valid JSON matching this structure (replace ALL placeholder va
       throw new Error('Error de red: ' + e.message);
     }
     clearTimeout(timer);
-    if (res.ok) break;
+    if (res.ok) { groqModelIdx = mi; break; }
     errBody = await res.json().catch(() => ({}));
     msg = errBody?.error?.message || `Error API: ${res.status}`;
-    if (body.response_format && /response_format|json/i.test(msg) && res.status === 400) { delete body.response_format; continue; }
-    const badModel = res.status === 404 || /does not exist|decommissioned|not support|image/i.test(msg);
-    if (!badModel || GROQ_MODELS.length < 2 || res.status === 401 || res.status === 429) break;
-    console.warn(`Modelo ${GROQ_MODELS[0]} no disponible: ${msg}`);
-    GROQ_MODELS.shift();
+    if (res.status === 400 && body.reasoning_format && /reasoning/i.test(msg)) { useReasoningFmt = false; continue; }
+    if (res.status === 400 && body.response_format && /response_format|json/i.test(msg)) { delete body.response_format; continue; }
+    const badModel = res.status === 404 || errBody?.error?.code === 'model_not_found' || /does not exist|decommissioned|model_not_found|(does not|not) support(ed)? (image|vision)/i.test(msg);
+    if (!badModel || mi + 1 >= GROQ_MODELS.length) break;
+    console.warn(`Modelo ${GROQ_MODELS[mi]} no disponible: ${msg}`);
+    mi++;
+    useReasoningFmt = true;
   }
 
   if (!res.ok) {
     if (res.status === 401) throw new Error('API Key inválida.');
     if (res.status === 429) throw new Error('Límite de requests excedido. Esperá 30 segundos y reintentá.');
-    throw new Error(msg);
+    const e = new Error(msg);
+    if (res.status >= 500 || res.status === 498) e.retryable = true;
+    throw e;
   }
 
   const result = await res.json();
-  const text = result.choices[0].message.content.trim();
+  const text = (result.choices?.[0]?.message?.content || '')
+    .replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^[\s\S]*<\/think>/i, '').trim();
   console.log(`[Img ${batchIdx+1}] API raw:`, text.slice(0, 300));
 
   // Try parsing — multiple strategies
   const strategies = [
     t => JSON.parse(t),
     t => JSON.parse(t.replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'')),
+    t => { const i = t.indexOf('{"resultados"'); return i >= 0 ? JSON.parse(t.slice(i, t.lastIndexOf('}') + 1)) : null; },
     t => { const m = t.match(/\{[\s\S]*\}/); return m ? JSON.parse(m[0]) : null; },
     t => { const m = t.match(/\[[\s\S]*\]/); return m ? { resultados: JSON.parse(m[0]) } : null; }
   ];
   for (const fn of strategies) {
-    try { const r = fn(text); if (r) return r; } catch(e) {}
+    try { const r = fn(text); if (r) return r.resultados ? r : { resultados: [r] }; } catch(e) {}
   }
 
   // All parsing failed — return null result for this image so others still process
@@ -128,8 +138,8 @@ async function extractWithClaude(apiKey, images, patient) {
         return await callGroqBatch(apiKey, [img], idx, total);
       } catch(e) {
         const is429 = e.message && (e.message.includes('429') || e.message.includes('Límite'));
-        if (is429 && attempt < maxRetries - 1) {
-          const waitSec = 35 + attempt * 20;
+        if ((is429 || e.retryable) && attempt < maxRetries - 1) {
+          const waitSec = is429 ? 35 + attempt * 20 : 5;
           const sub = document.getElementById('overlay-sub');
           for (let s = waitSec; s > 0; s--) {
             if (sub) sub.textContent = `Límite de requests — esperando ${s}s antes de reintentar imagen ${idx+1}...`;
@@ -148,13 +158,15 @@ async function extractWithClaude(apiKey, images, patient) {
 
     const batchData = await callWithRetry(images[i], i, images.length);
     if (batchData.resultados) {
-      allResults.push(...batchData.resultados);
+      allResults.push(...batchData.resultados.map(r => ({ ...r, _img: i })));
     }
 
     if (i + 1 < images.length) {
       await new Promise(r => setTimeout(r, 4000));
     }
   }
+
+  if (!allResults.length) throw new Error('La IA no devolvió datos legibles de las capturas. Reintentá.');
 
   // Detect global test label from results
   const keyCount = {};
