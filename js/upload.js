@@ -73,10 +73,11 @@ Esto tarda 10-20 segundos.`);
     // Update card labels with detected info
     if(data.resultados){
       data.resultados.forEach((r,i)=>{
-        if(uploadedImages[i]){
-          uploadedImages[i].muscleKey=r.musculo_key;
-          uploadedImages[i].muscleLabel=MUSCLE_LABELS[r.musculo_key]||r.musculo_label||'Otro';
-          uploadedImages[i].side=r.lado;
+        const u=uploadedImages[r._img??i];
+        if(u){
+          u.muscleKey=r.musculo_key;
+          u.muscleLabel=MUSCLE_LABELS[r.musculo_key]||r.musculo_label||'Otro';
+          u.side=r.lado;
         }
       });
       renderImgCards();
