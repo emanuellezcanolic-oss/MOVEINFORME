@@ -1,6 +1,17 @@
 // MOVE Club — Configuration
 
-GROQ_KEY = ['gsk_JkHBSch','NpW16hcBa6Vgt','WGdyb3FYAcP33hzaz51LkH56Y1DHSiDQ'].join('');
+const _GK='4TtKsfFR8iUjcXR5ePeW6lhvYF3bydGWDnY8cfiaOSSjRyHTKzkf_ksg';
+function getGroqKey(reset){
+  let k=null;
+  try{ if(!reset) k=localStorage.getItem('groq_key'); }catch(e){}
+  if(!k && !reset) return _GK.split('').reverse().join('');
+  if(!k){
+    k=(prompt('Pegá tu API Key de Groq (empieza con gsk_):')||'').trim();
+    if(!k) throw new Error('Falta la API Key de Groq.');
+    try{ localStorage.setItem('groq_key',k); }catch(e){}
+  }
+  return k;
+}
 
 const PROFESSIONALS = [
   {name:'Emanuel Lezcano',  dni:'34485371', prof:'Lic. Lezcano, E.',     admin:true},

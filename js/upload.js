@@ -64,7 +64,12 @@ Esto tarda 10-20 segundos.`);
       prof:document.getElementById('pProf').value||'Lic. Lezcano, E.',
       profPhoto:profPhoto,
     };
-    const data=await extractWithClaude(GROQ_KEY,uploadedImages,patient);
+    let data;
+    try{ data=await extractWithClaude(getGroqKey(),uploadedImages,patient); }
+    catch(e){
+      if(!/inválida/.test(e.message)) throw e;
+      data=await extractWithClaude(getGroqKey(true),uploadedImages,patient);
+    }
     // Update card labels with detected info
     if(data.resultados){
       data.resultados.forEach((r,i)=>{
