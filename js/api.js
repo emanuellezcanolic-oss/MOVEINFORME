@@ -1,5 +1,11 @@
 // MOVE Informe — Groq API (Llama 4 Scout, batched)
 
+const GROQ_MODELS = [
+  'qwen/qwen3.8-27b',
+  'qwen/qwen3.6-27b',
+  'meta-llama/llama-4-maverick-17b-128e-instruct'
+];
+
 /* ===== CLAUDE API CALL — MULTI-IMAGE (BATCHED 2x) ===== */
 
 async function callGroqBatch(apiKey, batchImages, batchIdx, totalImages) {
@@ -52,33 +58,42 @@ Respond ONLY with valid JSON matching this structure (replace ALL placeholder va
   ];
 
   const body = {
-    model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+    model: GROQ_MODELS[0],
     max_tokens: 2048,
     temperature: 0,
     response_format: { type: 'json_object' },
     messages: [{ role: 'user', content: msgContent }]
   };
 
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 45000);
-  let res;
-  try {
-    res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: ctrl.signal
-    });
-  } catch(e) {
+  let res, errBody, msg;
+  while (true) {
+    body.model = GROQ_MODELS[0];
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 45000);
+    try {
+      res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: ctrl.signal
+      });
+    } catch(e) {
+      clearTimeout(timer);
+      if (e.name === 'AbortError') throw new Error('Tiempo de espera agotado. La API tardó más de 45s. Reintentá.');
+      throw new Error('Error de red: ' + e.message);
+    }
     clearTimeout(timer);
-    if (e.name === 'AbortError') throw new Error('Tiempo de espera agotado. La API tardó más de 45s. Reintentá.');
-    throw new Error('Error de red: ' + e.message);
+    if (res.ok) break;
+    errBody = await res.json().catch(() => ({}));
+    msg = errBody?.error?.message || `Error API: ${res.status}`;
+    if (body.response_format && /response_format|json/i.test(msg) && res.status === 400) { delete body.response_format; continue; }
+    const badModel = res.status === 404 || /does not exist|decommissioned|not support|image/i.test(msg);
+    if (!badModel || GROQ_MODELS.length < 2 || res.status === 401 || res.status === 429) break;
+    console.warn(`Modelo ${GROQ_MODELS[0]} no disponible: ${msg}`);
+    GROQ_MODELS.shift();
   }
-  clearTimeout(timer);
 
   if (!res.ok) {
-    const errBody = await res.json().catch(() => ({}));
-    const msg = errBody?.error?.message || `Error API: ${res.status}`;
     if (res.status === 401) throw new Error('API Key inválida.');
     if (res.status === 429) throw new Error('Límite de requests excedido. Esperá 30 segundos y reintentá.');
     throw new Error(msg);
