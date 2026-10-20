@@ -71,7 +71,8 @@ Respond ONLY with valid JSON matching this structure (replace ALL placeholder va
   let useReasoningFmt = true;
   while (true) {
     body.model = GROQ_MODELS[mi];
-    if (useReasoningFmt && body.model.startsWith('qwen/')) body.reasoning_format = 'hidden'; else delete body.reasoning_format;
+    if (useReasoningFmt && body.model.startsWith('qwen/')) { body.reasoning_format = 'hidden'; body.reasoning_effort = 'none'; }
+    else { delete body.reasoning_format; delete body.reasoning_effort; }
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 45000);
     try {
@@ -90,7 +91,7 @@ Respond ONLY with valid JSON matching this structure (replace ALL placeholder va
     if (res.ok) { groqModelIdx = mi; break; }
     errBody = await res.json().catch(() => ({}));
     msg = errBody?.error?.message || `Error API: ${res.status}`;
-    if (res.status === 400 && body.reasoning_format && /reasoning/i.test(msg)) { useReasoningFmt = false; continue; }
+    if (res.status === 400 && (body.reasoning_format || body.reasoning_effort) && /reasoning/i.test(msg)) { useReasoningFmt = false; continue; }
     if (res.status === 400 && body.response_format && /response_format|json/i.test(msg)) { delete body.response_format; continue; }
     const badModel = res.status === 404 || errBody?.error?.code === 'model_not_found' || /does not exist|decommissioned|model_not_found|(does not|not) support(ed)? (image|vision)/i.test(msg);
     if (!badModel || mi + 1 >= GROQ_MODELS.length) break;
@@ -142,7 +143,9 @@ async function extractWithClaude(apiKey, images, patient) {
           const waitSec = is429 ? 35 + attempt * 20 : 5;
           const sub = document.getElementById('overlay-sub');
           for (let s = waitSec; s > 0; s--) {
-            if (sub) sub.textContent = `Límite de requests — esperando ${s}s antes de reintentar imagen ${idx+1}...`;
+            if (sub) sub.textContent = is429
+              ? `Límite de requests — esperando ${s}s antes de reintentar imagen ${idx+1}...`
+              : `Groq no respondió — reintentando imagen ${idx+1} en ${s}s...`;
             await new Promise(r => setTimeout(r, 1000));
           }
         } else {
@@ -162,7 +165,7 @@ async function extractWithClaude(apiKey, images, patient) {
     }
 
     if (i + 1 < images.length) {
-      await new Promise(r => setTimeout(r, 4000));
+      await new Promise(r => setTimeout(r, 1500));
     }
   }
 
